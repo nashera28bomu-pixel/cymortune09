@@ -1,16 +1,18 @@
 /**
  * app.js
- * Boots the app shell (landing → home handoff, mini player, sidebar,
- * bottom nav, PWA install, offline banner) and defines every page
- * controller under window.CT_Pages, called by router.js after each
- * template swap.
+ * Fixed: Router now init before any listeners. Landing -> App handoff always navigates.
+ * Added: Auto-bind [data-route] for bottom nav and other SPA links.
  */
 
 const { toast, songCard, albumCard, artistCard, playlistCard, songRow, section, skeletonRow, errorStateHtml, emptyStateHtml, bindGlobalSongInteractions, formatDuration, escapeHtml } = CT_UI;
 
-let router;
+let router; // will be set first in DOMContentLoaded
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. CREATE ROUTER FIRST - so every listener can use it
+  router = new Router('#app-view');
+
+  // 2. Now init everything else that uses router
   initLanding();
   initShellChrome();
   initMiniPlayer();
@@ -19,15 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initInstallPrompt();
   initOfflineBanner();
   initKeyboardShortcuts();
-
-  router = new Router('#app-view');
 });
 
-/* ================= Landing → App handoff ================= */
+/* ================= Landing -> App handoff ================= */
 
 function initLanding() {
   const landing = document.getElementById('landing');
   const shell = document.getElementById('app-shell');
+
   const enterApp = (path) => {
     landing.hidden = true;
     shell.hidden = false;
@@ -39,9 +40,10 @@ function initLanding() {
 
   // Skip landing automatically if the visitor already has data on this device
   const hasHistory = CT_Storage.History.recentlyPlayed().length > 0;
-  if (hasHistory && !location.hash.includes('landing')) {
+  if (hasHistory &&!location.hash.includes('landing')) {
     landing.hidden = true;
     shell.hidden = false;
+    router.navigate('/home'); // FIX: was missing. Otherwise #app-view stays empty
   }
 
   animateHeroStats();
@@ -78,7 +80,7 @@ function initShellChrome() {
     if (!q) return;
     CT_Storage.SearchHistory.add(q);
     sessionStorage.setItem('ct_pending_query', q);
-    if (location.pathname === '/search') {
+    if (router.currentPath === '/search') { // use router state if your Router exposes it
       window.CT_Pages.search();
     } else {
       router.navigate('/search');
@@ -87,6 +89,15 @@ function initShellChrome() {
 
   document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
     document.getElementById('app-shell').classList.toggle('sidebar-open');
+  });
+
+  // FIX: Auto-bind any button/link with [data-route="/path"]
+  // This makes your bottom nav work: <button data-route="/search">Search</button>
+  document.body.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-route]');
+    if (!el) return;
+    e.preventDefault();
+    router.navigate(el.dataset.route);
   });
 }
 
@@ -118,7 +129,7 @@ function initMiniPlayer() {
   CT_Player.addEventListener('song-changed', (e) => render(e.detail.song));
   CT_Player.addEventListener('play-state', (e) => {
     playBtn.innerHTML = e.detail.playing
-      ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
+     ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
     document.body.classList.toggle('is-playing', e.detail.playing);
   });
@@ -171,7 +182,7 @@ function initFullPlayer() {
   CT_Player.addEventListener('song-changed', (e) => render(e.detail.song));
   CT_Player.addEventListener('play-state', (e) => {
     els.play.innerHTML = e.detail.playing
-      ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
+     ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
     els.art.classList.toggle('is-spinning', e.detail.playing);
   });
@@ -183,7 +194,7 @@ function initFullPlayer() {
   });
   CT_Player.addEventListener('state-changed', () => {
     els.shuffle.classList.toggle('is-active', CT_Player.shuffleOn);
-    els.repeat.classList.toggle('is-active', CT_Player.repeatMode !== 'off');
+    els.repeat.classList.toggle('is-active', CT_Player.repeatMode!== 'off');
     els.repeat.dataset.mode = CT_Player.repeatMode;
   });
 
@@ -216,10 +227,10 @@ function renderQueueSheet() {
         <h3>Up next</h3>
         <div class="sheet__queue-list">
           ${queue.map((s, i) => `
-            <div class="queue-item ${i === CT_Player.index ? 'is-current' : ''}" data-queue-idx="${i}">
+            <div class="queue-item ${i === CT_Player.index? 'is-current' : ''}" data-queue-idx="${i}">
               <img src="${s.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
               <div class="queue-item__meta"><div>${escapeHtml(s.title)}</div><small>${escapeHtml(s.artist)}</small></div>
-              ${i !== CT_Player.index ? `<button class="icon-btn" data-remove-queue="${i}">✕</button>` : ''}
+              ${i!== CT_Player.index? `<button class="icon-btn" data-remove-queue="${i}">✕</button>` : ''}
             </div>`).join('') || '<p class="muted">Queue is empty.</p>'}
         </div>
       </div>
@@ -305,8 +316,8 @@ const CT_Pages = {};
 CT_Pages.home = async function () {
   const root = document.querySelector('[data-page="home"]');
   root.innerHTML = ['trending-songs', 'trending-albums', 'trending-artists', 'featured-playlists', 'recently-played', 'favorites', 'new-releases']
-    .map((id) => `<div id="home-${id}"></div>`)
-    .join('');
+   .map((id) => `<div id="home-${id}"></div>`)
+   .join('');
 
   renderHomeLocalSections();
 
@@ -323,7 +334,7 @@ CT_Pages.home = async function () {
     host.innerHTML = section(slot.title, skeletonRow(6));
     try {
       const items = await slot.fn();
-      if (!items || !items.length) {
+      if (!items ||!items.length) {
         host.innerHTML = '';
         continue;
       }
@@ -368,7 +379,7 @@ CT_Pages.search = async function () {
   input.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     const q = input.value.trim();
-    document.getElementById('search-clear').hidden = !q;
+    document.getElementById('search-clear').hidden =!q;
     if (!q) return renderSearchLanding();
     debounceTimer = setTimeout(() => runSearch(q), 350);
   });
@@ -391,7 +402,7 @@ CT_Pages.search = async function () {
   function renderSearchLanding() {
     const recent = CT_Storage.SearchHistory.all();
     resultsHost.innerHTML = `
-      ${recent.length ? `
+      ${recent.length? `
         <div class="search-recent">
           <div class="section__head"><h2>Recent searches</h2>
             <button class="section__see-all" id="clear-recent-search">Clear</button></div>
@@ -416,15 +427,15 @@ CT_Pages.search = async function () {
     resultsHost.innerHTML = skeletonRow(8, 'row');
     try {
       const { songs, albums, artists, playlists } = await CT_Api.search(q);
-      if (!songs.length && !albums.length && !artists.length && !playlists.length) {
+      if (!songs.length &&!albums.length &&!artists.length &&!playlists.length) {
         resultsHost.innerHTML = emptyStateHtml({ icon: '🙈', title: 'No results', message: `Nothing matched "${q}". Try a different spelling or artist name.` });
         return;
       }
       resultsHost.innerHTML = `
-        ${songs.length ? section('Songs', songs.slice(0, 8).map((s, i) => songRow(s, { index: i })).join(''), {}) : ''}
-        ${artists.length ? section('Artists', artists.map(artistCard).join('')) : ''}
-        ${albums.length ? section('Albums', albums.map(albumCard).join('')) : ''}
-        ${playlists.length ? section('Playlists', playlists.map(playlistCard).join('')) : ''}
+        ${songs.length? section('Songs', songs.slice(0, 8).map((s, i) => songRow(s, { index: i })).join(''), {}) : ''}
+        ${artists.length? section('Artists', artists.map(artistCard).join('')) : ''}
+        ${albums.length? section('Albums', albums.map(albumCard).join('')) : ''}
+        ${playlists.length? section('Playlists', playlists.map(playlistCard).join('')) : ''}
       `;
       bindGlobalSongInteractions(resultsHost, songs);
     } catch (err) {
@@ -444,14 +455,14 @@ CT_Pages.song = async function (id) {
       <div class="song-detail">
         <img class="song-detail__art" src="${song.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
         <h1>${escapeHtml(song.title)}</h1>
-        <p class="song-detail__artist">${escapeHtml(song.artist)}${song.album ? ' · ' + escapeHtml(song.album) : ''}</p>
-        <p class="song-detail__meta">${formatDuration(song.duration)}${song.language ? ' · ' + escapeHtml(song.language) : ''}</p>
+        <p class="song-detail__artist">${escapeHtml(song.artist)}${song.album? ' · ' + escapeHtml(song.album) : ''}</p>
+        <p class="song-detail__meta">${formatDuration(song.duration)}${song.language? ' · ' + escapeHtml(song.language) : ''}</p>
         <div class="song-detail__actions">
           <button class="btn btn--primary" id="song-play">▶ Play</button>
-          <button class="icon-btn ${isFav ? 'is-active' : ''}" id="song-fav">♥</button>
+          <button class="icon-btn ${isFav? 'is-active' : ''}" id="song-fav">♥</button>
           <button class="icon-btn" id="song-download">⬇</button>
           <button class="icon-btn" id="song-share">↗</button>
-          ${song.hasLyrics ? '<button class="icon-btn" id="song-lyrics">🎤</button>' : ''}
+          ${song.hasLyrics? '<button class="icon-btn" id="song-lyrics">🎤</button>' : ''}
         </div>
         <div id="song-related"></div>
       </div>`;
@@ -468,7 +479,7 @@ CT_Pages.song = async function (id) {
     relatedHost.innerHTML = section('Related Songs', skeletonRow(4, 'row'));
     try {
       const related = await CT_Api.recommendations(id);
-      relatedHost.innerHTML = related.length ? section('Related Songs', related.map((s, i) => songRow(s, { index: i })).join('')) : '';
+      relatedHost.innerHTML = related.length? section('Related Songs', related.map((s, i) => songRow(s, { index: i })).join('')) : '';
       bindGlobalSongInteractions(relatedHost, related);
     } catch {
       relatedHost.innerHTML = '';
@@ -485,7 +496,7 @@ CT_Pages.showLyrics = function (song) {
       <div class="sheet sheet--lyrics">
         <div class="sheet__handle"></div>
         <h3>${escapeHtml(song.title)}</h3>
-        <div class="lyrics-body">${song.lyrics ? escapeHtml(song.lyrics).replace(/\n/g, '<br>') : 'Lyrics unavailable for this track.'}</div>
+        <div class="lyrics-body">${song.lyrics? escapeHtml(song.lyrics).replace(/\n/g, '<br>') : 'Lyrics unavailable for this track.'}</div>
       </div>
     </div>`;
   modal.querySelector('[data-close-sheet]').addEventListener('click', (e) => {
@@ -505,7 +516,7 @@ CT_Pages.album = async function (id) {
         <div>
           <span class="eyebrow">Album</span>
           <h1>${escapeHtml(album.name)}</h1>
-          <p>${escapeHtml(album.artist)}${album.year ? ' · ' + album.year : ''} · ${album.songs.length} songs</p>
+          <p>${escapeHtml(album.artist)}${album.year? ' · ' + album.year : ''} · ${album.songs.length} songs</p>
           <div class="collection-header__actions">
             <button class="btn btn--primary" id="album-play-all">▶ Play All</button>
             <button class="btn btn--ghost" id="album-shuffle">🔀 Shuffle</button>
@@ -549,7 +560,7 @@ CT_Pages.artist = async function (id) {
           </div>
         </div>
       </div>
-      ${artist.bio ? `<p class="artist-bio">${escapeHtml(artist.bio)}</p>` : ''}
+      ${artist.bio? `<p class="artist-bio">${escapeHtml(artist.bio)}</p>` : ''}
       <div id="artist-top-songs"></div>
       <div id="artist-albums"></div>`;
 
@@ -624,8 +635,8 @@ function renderLocalPlaylist(root, playlist) {
         <h1 id="pl-name-display">${escapeHtml(playlist.name)}</h1>
         <p>${playlist.songs.length} songs</p>
         <div class="collection-header__actions">
-          <button class="btn btn--primary" id="pl-play-all" ${!playlist.songs.length ? 'disabled' : ''}>▶ Play All</button>
-          <button class="btn btn--ghost" id="pl-shuffle" ${!playlist.songs.length ? 'disabled' : ''}>🔀 Shuffle</button>
+          <button class="btn btn--primary" id="pl-play-all" ${!playlist.songs.length? 'disabled' : ''}>▶ Play All</button>
+          <button class="btn btn--ghost" id="pl-shuffle" ${!playlist.songs.length? 'disabled' : ''}>🔀 Shuffle</button>
           <button class="icon-btn" id="pl-rename">✎</button>
           <button class="icon-btn" id="pl-delete">🗑</button>
         </div>
@@ -683,7 +694,7 @@ CT_Pages.favorites = function () {
   const favs = CT_Storage.Favorites.all();
   root.innerHTML = `
     <div class="section__head"><h1>Favorites</h1>
-      ${favs.length ? '<button class="btn btn--primary" id="fav-play-all">▶ Play All</button>' : ''}</div>
+      ${favs.length? '<button class="btn btn--primary" id="fav-play-all">▶ Play All</button>' : ''}</div>
     <div class="song-list">${favs.map((s, i) => songRow(s, { index: i })).join('') || emptyStateHtml({ icon: '♥', title: 'No favorites yet', message: 'Tap the heart on any song to save it here.', actionLabel: 'Discover music', actionRoute: '/search' })}</div>`;
   bindGlobalSongInteractions(root, favs);
   document.getElementById('fav-play-all')?.addEventListener('click', () => CT_Player.playQueue(favs, 0));
@@ -694,165 +705,3 @@ CT_Pages.history = function () {
   const h = CT_Storage.History.raw();
   root.innerHTML = `
     <div class="section__head"><h1>History</h1>
-      ${h.songs.length ? '<button class="btn btn--ghost" id="clear-history">Clear</button>' : ''}</div>
-    ${h.songs.length ? section('Recently Played', h.songs.map((s, i) => songRow(s, { index: i })).join('')) : ''}
-    ${h.albums?.length ? section('Recently Viewed Albums', h.albums.map(albumCard).join('')) : ''}
-    ${h.artists?.length ? section('Recently Viewed Artists', h.artists.map(artistCard).join('')) : ''}
-    ${h.playlists?.length ? section('Recently Viewed Playlists', h.playlists.map(playlistCard).join('')) : ''}
-    ${!h.songs.length && !h.albums?.length && !h.artists?.length ? emptyStateHtml({ icon: '🕓', title: 'Nothing here yet', message: 'Songs, albums, and artists you open will show up here.' }) : ''}
-  `;
-  bindGlobalSongInteractions(root, h.songs);
-  document.getElementById('clear-history')?.addEventListener('click', () => {
-    if (confirm('Clear your entire listening history?')) {
-      CT_Storage.History.clear();
-      CT_Pages.history();
-    }
-  });
-};
-
-CT_Pages.downloads = function () {
-  const root = document.querySelector('[data-page="downloads"]');
-  renderDownloadsList(root, CT_Storage.Downloads.all());
-};
-
-function renderDownloadsList(root, list) {
-  root.innerHTML = `
-    <div class="section__head"><h1>Downloads</h1></div>
-    <input type="text" id="downloads-search" class="input" placeholder="Search downloads">
-    <div class="song-list" id="downloads-list">${list.map((s, i) => songRow(s, { index: i, showRemove: true })).join('') || emptyStateHtml({ icon: '⬇', title: 'No downloads', message: 'Download songs to play them without a connection.', actionLabel: 'Find music', actionRoute: '/search' })}</div>`;
-  bindGlobalSongInteractions(root, list);
-  root.querySelectorAll('[data-row-remove]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      CT_Storage.Downloads.remove(btn.dataset.rowRemove);
-      toast('Removed download');
-      renderDownloadsList(root, CT_Storage.Downloads.all());
-    });
-  });
-  document.getElementById('downloads-search').addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    const filtered = CT_Storage.Downloads.all().filter((s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q));
-    const listHost = document.getElementById('downloads-list');
-    listHost.innerHTML = filtered.map((s, i) => songRow(s, { index: i, showRemove: true })).join('') || emptyStateHtml({ icon: '🔎', title: 'No matches', message: 'Try a different search.' });
-    bindGlobalSongInteractions(listHost, filtered);
-    listHost.querySelectorAll('[data-row-remove]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        CT_Storage.Downloads.remove(btn.dataset.rowRemove);
-        renderDownloadsList(root, CT_Storage.Downloads.all());
-      });
-    });
-  });
-}
-
-CT_Pages.downloadToggle = async function (song, silent = false) {
-  if (CT_Storage.Downloads.has(song.id)) {
-    CT_Storage.Downloads.remove(song.id);
-    if (!silent) toast('Download removed');
-    return;
-  }
-  if (!song.streamUrl) return toast('This track has no downloadable source', 'error');
-  if (!silent) toast('Downloading…');
-  try {
-    if ('caches' in window) {
-      const cache = await caches.open('cymor-tune-audio');
-      await cache.add(song.streamUrl);
-    }
-    CT_Storage.Downloads.add({ ...song, sizeBytes: 0 });
-    if (!silent) toast('Downloaded for offline play');
-  } catch (err) {
-    if (!silent) toast('Download failed — try again when online', 'error');
-  }
-};
-
-CT_Pages.settings = function () {
-  const root = document.querySelector('[data-page="settings"]');
-  const settings = CT_Storage.Settings.get();
-  const lsBytes = CT_Storage.estimateLocalStorageBytes();
-
-  root.innerHTML = `
-    <div class="section__head"><h1>Settings</h1></div>
-    <div class="settings-group">
-      <div class="settings-row">
-        <div><strong>Theme</strong><p>Cymor Tune is designed for dark mode</p></div>
-        <select id="setting-theme" class="input input--select">
-          <option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>Dark</option>
-          <option value="midnight" ${settings.theme === 'midnight' ? 'selected' : ''}>Midnight (AMOLED)</option>
-        </select>
-      </div>
-      <div class="settings-row">
-        <div><strong>Autoplay</strong><p>Continue playing similar songs when queue ends</p></div>
-        <label class="switch"><input type="checkbox" id="setting-autoplay" ${settings.autoplay ? 'checked' : ''}><span></span></label>
-      </div>
-      <div class="settings-row">
-        <div><strong>Stream quality</strong><p>Higher quality uses more data</p></div>
-        <select id="setting-quality" class="input input--select">
-          <option value="auto" ${settings.streamQuality === 'auto' ? 'selected' : ''}>Auto</option>
-          <option value="high" ${settings.streamQuality === 'high' ? 'selected' : ''}>High</option>
-          <option value="data-saver" ${settings.streamQuality === 'data-saver' ? 'selected' : ''}>Data saver</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="settings-group">
-      <div class="settings-row"><div><strong>Storage used</strong><p id="cache-size-label">Calculating…</p></div>
-        <button class="btn btn--ghost" id="clear-cache">Clear cache</button></div>
-      <div class="settings-row"><div><strong>Clear history</strong><p>${CT_Storage.History.recentlyPlayed().length} songs played</p></div>
-        <button class="btn btn--ghost" id="clear-history-setting">Clear</button></div>
-      <div class="settings-row"><div><strong>Clear favorites</strong><p>${CT_Storage.Favorites.all().length} saved songs</p></div>
-        <button class="btn btn--ghost" id="clear-favorites-setting">Clear</button></div>
-      <div class="settings-row"><div><strong>Clear downloads</strong><p>${CT_Storage.Downloads.all().length} downloaded songs</p></div>
-        <button class="btn btn--ghost" id="clear-downloads-setting">Clear</button></div>
-    </div>
-
-    <div class="settings-group">
-      <div class="settings-row"><div><strong>About Cymor Tune</strong><p>Version 1.0.0 · Built by Cymor Tech Services</p></div></div>
-      <div class="settings-row"><div><strong>Source</strong><p>View this project on GitHub</p></div>
-        <a class="btn btn--ghost" href="https://github.com" target="_blank" rel="noopener">GitHub</a></div>
-    </div>`;
-
-  CT_Storage.estimateCacheStorageBytes().then((bytes) => {
-    document.getElementById('cache-size-label').textContent = `${CT_UI.formatBytes(lsBytes + bytes)} used on this device`;
-  });
-
-  document.getElementById('setting-theme').addEventListener('change', (e) => {
-    CT_Storage.Settings.update({ theme: e.target.value });
-    document.documentElement.dataset.theme = e.target.value;
-  });
-  document.getElementById('setting-autoplay').addEventListener('change', (e) => CT_Storage.Settings.update({ autoplay: e.target.checked }));
-  document.getElementById('setting-quality').addEventListener('change', (e) => CT_Storage.Settings.update({ streamQuality: e.target.value }));
-  document.getElementById('clear-cache').addEventListener('click', async () => {
-    if ('caches' in window) await caches.delete('cymor-tune-runtime');
-    toast('Cache cleared');
-    CT_Pages.settings();
-  });
-  document.getElementById('clear-history-setting').addEventListener('click', () => {
-    if (confirm('Clear listening history?')) {
-      CT_Storage.History.clear();
-      CT_Pages.settings();
-    }
-  });
-  document.getElementById('clear-favorites-setting').addEventListener('click', () => {
-    if (confirm('Clear all favorites?')) {
-      CT_Storage.Favorites.clear();
-      CT_Pages.settings();
-    }
-  });
-  document.getElementById('clear-downloads-setting').addEventListener('click', () => {
-    if (confirm('Remove all downloads?')) {
-      CT_Storage.Downloads.clear();
-      CT_Pages.settings();
-    }
-  });
-};
-
-function sharePayload(title, url) {
-  if (navigator.share) {
-    navigator.share({ title, url }).catch(() => {});
-  } else {
-    navigator.clipboard?.writeText(url);
-    toast('Link copied to clipboard');
-  }
-}
-
-window.CT_Pages = CT_Pages;

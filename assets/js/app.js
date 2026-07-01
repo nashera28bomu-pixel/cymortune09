@@ -11,6 +11,8 @@ const { toast, songCard, albumCard, artistCard, playlistCard, songRow, section, 
 let router;
 
 document.addEventListener('DOMContentLoaded', () => {
+  router = new Router('#app-view'); // <-- moved to line 1 inside DOMContentLoaded
+
   initLanding();
   initShellChrome();
   initMiniPlayer();
@@ -19,8 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initInstallPrompt();
   initOfflineBanner();
   initKeyboardShortcuts();
-
-  router = new Router('#app-view');
 });
 
 /* ================= Landing → App handoff ================= */
@@ -42,6 +42,7 @@ function initLanding() {
   if (hasHistory && !location.hash.includes('landing')) {
     landing.hidden = true;
     shell.hidden = false;
+    router.navigate('/home'); // <-- add this line
   }
 
   animateHeroStats();
@@ -87,6 +88,13 @@ function initShellChrome() {
 
   document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
     document.getElementById('app-shell').classList.toggle('sidebar-open');
+    // FIX: Auto-bind any button with [data-route="/path"] 
+  document.body.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-route]');
+    if (!el) return;
+    e.preventDefault();
+    router.navigate(el.dataset.route);
+  
   });
 }
 

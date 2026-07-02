@@ -61,6 +61,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
+
+/* The hidden attribute must always win, no matter what display rule an
+   ID/class selector elsewhere sets on the same element (this is what was
+   keeping #app-shell visible on top of the landing page). */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--void);

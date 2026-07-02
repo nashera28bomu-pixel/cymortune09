@@ -6,18 +6,28 @@
  * template swap.
  */
 
-const { toast, songCard, albumCard, artistCard, playlistCard, songRow, section, skeletonRow, errorStateHtml, emptyStateHtml, bindGlobalSongInteractions, formatDuration, escapeHtml } = CT_UI;
+// Guards against a duplicate <script src="app.js"> tag causing this whole
+// file to execute twice (which previously crashed with "Identifier 'toast'
+// has already been declared", since a second run redeclares top-level
+// const/let bindings in the same script scope).
+if (window.__CT_APP_LOADED__) {
+  console.warn('[app.js] loaded more than once — skipping duplicate execution. Check index.html for a repeated <script src="/assets/js/app.js"> tag.');
+} else {
+  window.__CT_APP_LOADED__ = true;
 
-let router;
+  (function () {
+    const { toast, songCard, albumCard, artistCard, playlistCard, songRow, section, skeletonRow, errorStateHtml, emptyStateHtml, bindGlobalSongInteractions, formatDuration, escapeHtml } = CT_UI;
 
-document.addEventListener('DOMContentLoaded', () => {
-  const boot = [
-    ['router', () => { router = new Router('#app-view'); }],
-    ['landing', initLanding],
-    ['shell chrome', initShellChrome],
-    ['mini player', initMiniPlayer],
-    ['full player', initFullPlayer],
-    ['service worker', initServiceWorker],
+    let router;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const boot = [
+        ['router', () => { router = new Router('#app-view'); }],
+        ['landing', initLanding],
+        ['shell chrome', initShellChrome],
+        ['mini player', initMiniPlayer],
+        ['full player', initFullPlayer],
+        ['service worker', initServiceWorker],
     ['install prompt', initInstallPrompt],
     ['offline banner', initOfflineBanner],
     ['keyboard shortcuts', initKeyboardShortcuts],
@@ -871,3 +881,5 @@ function sharePayload(title, url) {
 }
 
 window.CT_Pages = CT_Pages;
+  })();
+}

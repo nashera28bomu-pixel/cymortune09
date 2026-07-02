@@ -87,7 +87,7 @@ function songCard(song) {
   return `
     <button class="card card--song" data-song-card="${song.id}" aria-label="Play ${escapeHtml(song.title)}">
       <div class="card__art">
-        <img src="${song.artwork}" alt="" loading="lazy" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${song.artwork}" alt="" loading="lazy" onerror="this.src='/assets/images/placeholder-art.svg'">
         <span class="card__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
       </div>
       <div class="card__title">${escapeHtml(song.title)}</div>
@@ -99,7 +99,7 @@ function albumCard(album) {
   return `
     <a class="card card--album" href="/album/${album.id}" data-route="/album/${album.id}">
       <div class="card__art card__art--square">
-        <img src="${album.artwork}" alt="" loading="lazy" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${album.artwork}" alt="" loading="lazy" onerror="this.src='/assets/images/placeholder-art.svg'">
       </div>
       <div class="card__title">${escapeHtml(album.name)}</div>
       <div class="card__subtitle">${escapeHtml(album.artist)}${album.year ? ' · ' + album.year : ''}</div>
@@ -110,7 +110,7 @@ function artistCard(artist) {
   return `
     <a class="card card--artist" href="/artist/${artist.id}" data-route="/artist/${artist.id}">
       <div class="card__art card__art--round">
-        <img src="${artist.image}" alt="" loading="lazy" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${artist.image}" alt="" loading="lazy" onerror="this.src='/assets/images/placeholder-art.svg'">
       </div>
       <div class="card__title">${escapeHtml(artist.name)}</div>
       <div class="card__subtitle">Artist</div>
@@ -121,7 +121,7 @@ function playlistCard(playlist) {
   return `
     <a class="card card--playlist" href="/playlist/${playlist.id}" data-route="/playlist/${playlist.id}">
       <div class="card__art card__art--square">
-        <img src="${playlist.artwork}" alt="" loading="lazy" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${playlist.artwork}" alt="" loading="lazy" onerror="this.src='/assets/images/placeholder-art.svg'">
       </div>
       <div class="card__title">${escapeHtml(playlist.name)}</div>
       <div class="card__subtitle">${playlist.songCount || playlist.songs?.length || 0} tracks</div>
@@ -134,7 +134,7 @@ function songRow(song, { index, showAlbum = false, showRemove = false } = {}) {
     <div class="song-row" data-song-row="${song.id}">
       <button class="song-row__play" data-play-row="${song.id}" aria-label="Play ${escapeHtml(song.title)}">
         ${index !== undefined ? `<span class="song-row__index">${index + 1}</span>` : ''}
-        <img class="song-row__art" src="${song.artwork}" alt="" loading="lazy" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img class="song-row__art" src="${song.artwork}" alt="" loading="lazy" onerror="this.src='/assets/images/placeholder-art.svg'">
         <svg class="song-row__play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="song-row__meta" data-play-row="${song.id}">
@@ -173,7 +173,7 @@ function openSongMenu(song, anchorSong) {
       <div class="sheet" role="dialog" aria-label="Song options">
         <div class="sheet__handle"></div>
         <div class="sheet__song">
-          <img src="${song.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+          <img src="${song.artwork}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
           <div>
             <div class="sheet__song-title">${escapeHtml(song.title)}</div>
             <div class="sheet__song-artist">${escapeHtml(song.artist)}</div>

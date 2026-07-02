@@ -11,16 +11,25 @@ const { toast, songCard, albumCard, artistCard, playlistCard, songRow, section, 
 let router;
 
 document.addEventListener('DOMContentLoaded', () => {
-  router = new Router('#app-view');
-
-  initLanding();
-  initShellChrome();
-  initMiniPlayer();
-  initFullPlayer();
-  initServiceWorker();
-  initInstallPrompt();
-  initOfflineBanner();
-  initKeyboardShortcuts();
+  const boot = [
+    ['router', () => { router = new Router('#app-view'); }],
+    ['landing', initLanding],
+    ['shell chrome', initShellChrome],
+    ['mini player', initMiniPlayer],
+    ['full player', initFullPlayer],
+    ['service worker', initServiceWorker],
+    ['install prompt', initInstallPrompt],
+    ['offline banner', initOfflineBanner],
+    ['keyboard shortcuts', initKeyboardShortcuts],
+  ];
+  for (const [label, fn] of boot) {
+    try {
+      fn();
+    } catch (err) {
+      console.error(`[boot] ${label} failed:`, err);
+      window.CT_reportError?.(`Boot step "${label}" failed: ${err.message}`);
+    }
+  }
 });
 
 /* ================= Landing → App handoff ================= */
@@ -38,7 +47,12 @@ function initLanding() {
   document.querySelectorAll('[data-nav-explore]').forEach((btn) => btn.addEventListener('click', () => enterApp('/search')));
 
   // Skip landing automatically if the visitor already has data on this device
-  const hasHistory = CT_Storage.History.recentlyPlayed().length > 0;
+  let hasHistory = false;
+  try {
+    hasHistory = CT_Storage.History.recentlyPlayed().length > 0;
+  } catch (err) {
+    console.error('[landing] history check failed:', err);
+  }
   if (hasHistory && !location.hash.includes('landing')) {
     landing.hidden = true;
     shell.hidden = false;
@@ -218,7 +232,7 @@ function renderQueueSheet() {
         <div class="sheet__queue-list">
           ${queue.map((s, i) => `
             <div class="queue-item ${i === CT_Player.index ? 'is-current' : ''}" data-queue-idx="${i}">
-              <img src="${s.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+              <img src="${s.artwork}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
               <div class="queue-item__meta"><div>${escapeHtml(s.title)}</div><small>${escapeHtml(s.artist)}</small></div>
               ${i !== CT_Player.index ? `<button class="icon-btn" data-remove-queue="${i}">✕</button>` : ''}
             </div>`).join('') || '<p class="muted">Queue is empty.</p>'}
@@ -443,7 +457,7 @@ CT_Pages.song = async function (id) {
     const isFav = CT_Storage.Favorites.has(song.id);
     root.innerHTML = `
       <div class="song-detail">
-        <img class="song-detail__art" src="${song.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img class="song-detail__art" src="${song.artwork}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
         <h1>${escapeHtml(song.title)}</h1>
         <p class="song-detail__artist">${escapeHtml(song.artist)}${song.album ? ' · ' + escapeHtml(song.album) : ''}</p>
         <p class="song-detail__meta">${formatDuration(song.duration)}${song.language ? ' · ' + escapeHtml(song.language) : ''}</p>
@@ -502,7 +516,7 @@ CT_Pages.album = async function (id) {
     CT_Storage.History.addViewed('albums', { id: album.id, name: album.name, artwork: album.artwork, artist: album.artist });
     root.innerHTML = `
       <div class="collection-header">
-        <img src="${album.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${album.artwork}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
         <div>
           <span class="eyebrow">Album</span>
           <h1>${escapeHtml(album.name)}</h1>
@@ -540,7 +554,7 @@ CT_Pages.artist = async function (id) {
     CT_Storage.History.addViewed('artists', { id: artist.id, name: artist.name, artwork: artist.image });
     root.innerHTML = `
       <div class="collection-header collection-header--artist">
-        <img class="collection-header__round" src="${artist.image}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img class="collection-header__round" src="${artist.image}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
         <div>
           <span class="eyebrow">Artist</span>
           <h1>${escapeHtml(artist.name)}</h1>
@@ -592,7 +606,7 @@ CT_Pages.playlist = async function (id) {
     CT_Storage.History.addViewed('playlists', { id: playlist.id, name: playlist.name, artwork: playlist.artwork });
     root.innerHTML = `
       <div class="collection-header">
-        <img src="${playlist.artwork}" alt="" onerror="this.src='assets/images/placeholder-art.svg'">
+        <img src="${playlist.artwork}" alt="" onerror="this.src='/assets/images/placeholder-art.svg'">
         <div>
           <span class="eyebrow">Playlist</span>
           <h1>${escapeHtml(playlist.name)}</h1>

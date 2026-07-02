@@ -93,14 +93,14 @@ async function request(path, { method = 'GET', retries = MAX_RETRIES, useCache =
 /* ---------------- Normalizers ---------------- */
 
 function bestImage(imageField) {
-  if (!imageField) return 'assets/images/placeholder-art.svg';
+  if (!imageField) return '/assets/images/placeholder-art.svg';
   if (typeof imageField === 'string') return imageField;
   if (Array.isArray(imageField)) {
     // JioSaavn-style: [{quality:'50x50', link/url}, ...] — take the last (highest quality)
     const last = imageField[imageField.length - 1];
-    return last?.link || last?.url || last?.src || 'assets/images/placeholder-art.svg';
+    return last?.link || last?.url || last?.src || '/assets/images/placeholder-art.svg';
   }
-  return imageField.link || imageField.url || 'assets/images/placeholder-art.svg';
+  return imageField.link || imageField.url || '/assets/images/placeholder-art.svg';
 }
 
 function bestStreamUrl(downloadField) {

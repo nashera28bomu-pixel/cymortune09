@@ -1,25 +1,44 @@
 /**
  * api.js
- * Single reusable client for the Cymor Tune backend.
+ * Client for the Cymor Tune backend at https://cymortuneapi.onrender.com,
+ * which runs the "sumitkolhe/jiosaavn-api" wrapper (confirmed from a live
+ * response sample). Endpoints and field names below are matched to that
+ * project's actual contract:
  *
- * Base URL is fixed per spec: https://cymortuneapi.onrender.com
- * All music data comes from here — nothing is ever hardcoded.
+ *   GET /api/search?query=                    quick multi-type search
+ *   GET /api/search/songs?query=&page=&limit=  full song objects (has downloadUrl)
+ *   GET /api/search/albums?query=
+ *   GET /api/search/artists?query=
+ *   GET /api/search/playlists?query=
+ *   GET /api/songs/:id                         song detail (has downloadUrl)
+ *   GET /api/songs/:id/lyrics
+ *   GET /api/songs/:id/suggestions              "related songs"
+ *   GET /api/albums?id=:id
+ *   GET /api/artists/:id
+ *   GET /api/artists/:id/songs
+ *   GET /api/artists/:id/albums
+ *   GET /api/playlists?id=:id
  *
- * NOTE ON RESPONSE SHAPES:
- * The backend wraps a JioSaavn-style catalog. Different deployments of this
- * kind of API nest results differently (root array vs `data` vs `results` vs
- * `data.results`, and song objects vary between `image`/`image[n].link` etc).
- * normalizeSong/Album/Artist/Playlist below defensively read multiple known
- * shapes so the UI never has to care. If the live backend changes its
- * contract, only this file needs to change.
+ * IMPORTANT: this API has no "trending" / "charts" / "new releases" /
+ * "featured playlists" endpoint of any kind — it's search + lookup-by-id
+ * only. There is nothing to discover without a query, so the Home page
+ * (app.js) does not call anything like that; it leans on a curated list of
+ * seed searches instead. Don't add trending/charts calls here — they don't
+ * exist on this backend.
+ *
+ * All song objects returned by *this file* are normalized to one shape
+ * regardless of which endpoint they came from (see normalizeSong). Quick
+ * multi-type search results are lighter (no downloadUrl, no duration) than
+ * /api/search/songs or /api/songs/:id results — CT_Player lazily re-fetches
+ * full song data by id the moment something without a streamUrl is played.
  */
 
 const BASE_URL = 'https://cymortuneapi.onrender.com';
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 15000;
 const MAX_RETRIES = 2;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min in-memory cache for repeat navigation
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const memoryCache = new Map(); // url -> { at, data }
+const memoryCache = new Map();
 
 class ApiError extends Error {
   constructor(message, status, isTimeout = false, isOffline = false) {
@@ -38,49 +57,39 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-async function request(path, { method = 'GET', retries = MAX_RETRIES, useCache = true } = {}) {
+async function request(path, { retries = MAX_RETRIES, useCache = true } = {}) {
   const url = `${BASE_URL}${path}`;
 
-  if (!navigator.onLine) {
-    throw new ApiError('You are offline', null, false, true);
-  }
+  if (!navigator.onLine) throw new ApiError('You are offline', null, false, true);
 
-  if (useCache && method === 'GET') {
+  if (useCache) {
     const cached = memoryCache.get(url);
-    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-      return cached.data;
-    }
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.data;
   }
 
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const fetchPromise = fetch(url, { method, signal: controller.signal, headers: { Accept: 'application/json' } });
+      const fetchPromise = fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
       const res = await withTimeout(fetchPromise, REQUEST_TIMEOUT_MS).catch((err) => {
         controller.abort();
         throw err;
       });
 
-      if (res.status === 404) {
-        throw new ApiError('Not found', 404);
-      }
-      if (res.status >= 500) {
-        throw new ApiError('Server error, retrying…', res.status);
-      }
-      if (!res.ok) {
-        throw new ApiError(`Request failed (${res.status})`, res.status);
-      }
+      if (res.status === 404) throw new ApiError('Not found', 404);
+      if (res.status >= 500) throw new ApiError('Server error, retrying…', res.status);
+      if (!res.ok) throw new ApiError(`Request failed (${res.status})`, res.status);
 
       const json = await res.json();
-      if (useCache && method === 'GET') {
-        memoryCache.set(url, { at: Date.now(), data: json });
+      if (json && json.success === false) {
+        throw new ApiError(json.message || 'The backend rejected this request', 400);
       }
+      if (useCache) memoryCache.set(url, { at: Date.now(), data: json });
       return json;
     } catch (err) {
       lastErr = err instanceof ApiError ? err : new ApiError(err.message, null, err.name === 'AbortError' || err.isTimeout);
-      // Don't retry 404s
-      if (lastErr.status === 404) break;
+      if (lastErr.status === 404 || lastErr.status === 400) break;
       if (attempt < retries) {
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         continue;
@@ -91,89 +100,90 @@ async function request(path, { method = 'GET', retries = MAX_RETRIES, useCache =
 }
 
 /* ---------------- Normalizers ---------------- */
-
+// Every image field on this API is an array of { quality, url }.
 function bestImage(imageField) {
   if (!imageField) return '/assets/images/placeholder-art.svg';
   if (typeof imageField === 'string') return imageField;
   if (Array.isArray(imageField)) {
-    // JioSaavn-style: [{quality:'50x50', link/url}, ...] — take the last (highest quality)
     const last = imageField[imageField.length - 1];
-    return last?.link || last?.url || last?.src || '/assets/images/placeholder-art.svg';
+    return last?.url || last?.link || '/assets/images/placeholder-art.svg';
   }
-  return imageField.link || imageField.url || '/assets/images/placeholder-art.svg';
+  return imageField.url || imageField.link || '/assets/images/placeholder-art.svg';
 }
 
-function bestStreamUrl(downloadField) {
-  if (!downloadField) return null;
-  if (typeof downloadField === 'string') return downloadField;
-  if (Array.isArray(downloadField)) {
-    const last = downloadField[downloadField.length - 1];
-    return last?.link || last?.url || null;
+// downloadUrl is an array of { quality, url }, e.g. 12kbps..320kbps. Take the highest.
+function bestStreamUrl(downloadUrlField) {
+  if (!downloadUrlField) return null;
+  if (typeof downloadUrlField === 'string') return downloadUrlField;
+  if (Array.isArray(downloadUrlField) && downloadUrlField.length) {
+    return downloadUrlField[downloadUrlField.length - 1]?.url || null;
   }
-  return downloadField.link || downloadField.url || null;
+  return null;
+}
+
+function artistNames(raw) {
+  // Full-shape songs have artists.primary[]; quick-search songs have a flat primaryArtists string.
+  if (raw.artists?.primary?.length) return raw.artists.primary.map((a) => a.name).join(', ');
+  if (raw.primaryArtists) return raw.primaryArtists;
+  if (raw.singers) return raw.singers;
+  if (raw.subtitle) return raw.subtitle;
+  return 'Unknown artist';
 }
 
 function normalizeSong(raw) {
   if (!raw) return null;
   return {
-    id: raw.id || raw.songId || raw._id || String(raw.title || '') + Math.random(),
-    title: cleanText(raw.title || raw.name || raw.song || 'Unknown title'),
-    artist: cleanText(
-      raw.artist ||
-        raw.subtitle ||
-        raw.primaryArtists ||
-        (Array.isArray(raw.artists?.primary) ? raw.artists.primary.map((a) => a.name).join(', ') : '') ||
-        'Unknown artist'
-    ),
+    id: raw.id,
+    title: cleanText(raw.name || raw.title || 'Unknown title'),
+    artist: cleanText(artistNames(raw)),
     album: cleanText(raw.album?.name || raw.album || ''),
-    artwork: bestImage(raw.image || raw.artwork || raw.thumbnail),
+    albumId: raw.album?.id || null,
+    artwork: bestImage(raw.image),
     duration: Number(raw.duration) || 0,
     language: raw.language || '',
-    streamUrl: bestStreamUrl(raw.downloadUrl || raw.media_url || raw.stream || raw.url),
-    lyrics: raw.lyrics || null,
-    hasLyrics: Boolean(raw.hasLyrics || raw.lyrics),
+    streamUrl: bestStreamUrl(raw.downloadUrl),
+    lyrics: null,
+    hasLyrics: Boolean(raw.hasLyrics),
+    lyricsId: raw.lyricsId || raw.id,
     year: raw.year || raw.releaseDate || '',
-    raw,
+    jiosaavnUrl: raw.url || null,
   };
 }
 
 function normalizeAlbum(raw) {
   if (!raw) return null;
   return {
-    id: raw.id || raw.albumId || raw._id,
+    id: raw.id,
     name: cleanText(raw.name || raw.title || 'Unknown album'),
-    artist: cleanText(raw.artist || raw.subtitle || raw.primaryArtists || ''),
-    artwork: bestImage(raw.image || raw.artwork),
-    year: raw.year || raw.releaseDate || '',
+    artist: cleanText(raw.artists?.primary?.map((a) => a.name).join(', ') || raw.artist || ''),
+    artwork: bestImage(raw.image),
+    year: raw.year || '',
     songCount: raw.songCount || raw.songs?.length || 0,
     songs: Array.isArray(raw.songs) ? raw.songs.map(normalizeSong) : [],
-    raw,
   };
 }
 
 function normalizeArtist(raw) {
   if (!raw) return null;
   return {
-    id: raw.id || raw.artistId || raw._id,
+    id: raw.id,
     name: cleanText(raw.name || raw.title || 'Unknown artist'),
-    image: bestImage(raw.image || raw.artwork),
-    bio: raw.bio || raw.dob ? raw.bio : '',
+    image: bestImage(raw.image),
+    bio: raw.bio && Array.isArray(raw.bio) ? raw.bio.map((b) => b.text).join('\n\n') : raw.bio || '',
     topSongs: Array.isArray(raw.topSongs) ? raw.topSongs.map(normalizeSong) : [],
-    albums: Array.isArray(raw.albums) ? raw.albums.map(normalizeAlbum) : [],
-    raw,
+    albums: Array.isArray(raw.topAlbums) ? raw.topAlbums.map(normalizeAlbum) : Array.isArray(raw.albums) ? raw.albums.map(normalizeAlbum) : [],
   };
 }
 
 function normalizePlaylist(raw) {
   if (!raw) return null;
   return {
-    id: raw.id || raw.playlistId || raw._id,
+    id: raw.id,
     name: cleanText(raw.name || raw.title || 'Untitled playlist'),
     description: cleanText(raw.description || ''),
-    artwork: bestImage(raw.image || raw.artwork),
+    artwork: bestImage(raw.image),
     songCount: raw.songCount || raw.songs?.length || 0,
     songs: Array.isArray(raw.songs) ? raw.songs.map(normalizeSong) : [],
-    raw,
   };
 }
 
@@ -186,78 +196,92 @@ function cleanText(str) {
     .trim();
 }
 
-function pickArray(json, ...keys) {
-  for (const k of keys) {
-    const val = k.split('.').reduce((o, key) => (o ? o[key] : undefined), json);
-    if (Array.isArray(val)) return val;
-  }
-  return Array.isArray(json) ? json : [];
+function resultsOf(json) {
+  // Handles both { data: { results: [...] } } (typed search) and a raw array fallback.
+  if (Array.isArray(json?.data?.results)) return json.data.results;
+  if (Array.isArray(json?.data)) return json.data;
+  return [];
 }
 
 /* ---------------- Public API ---------------- */
 
 const Api = {
-  async search(query, { limit = 20 } = {}) {
+  /** Combined search across all four types, each with full field data. */
+  async search(query, { limit = 15 } = {}) {
     if (!query || !query.trim()) return { songs: [], albums: [], artists: [], playlists: [] };
-    const json = await request(`/api/v1/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const q = encodeURIComponent(query.trim());
+    const [songs, albums, artists, playlists] = await Promise.all([
+      request(`/api/search/songs?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
+      request(`/api/search/albums?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
+      request(`/api/search/artists?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
+      request(`/api/search/playlists?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
+    ]);
     return {
-      songs: pickArray(json, 'songs', 'data.songs', 'results.songs', 'data.results').map(normalizeSong),
-      albums: pickArray(json, 'albums', 'data.albums', 'results.albums').map(normalizeAlbum),
-      artists: pickArray(json, 'artists', 'data.artists', 'results.artists').map(normalizeArtist),
-      playlists: pickArray(json, 'playlists', 'data.playlists', 'results.playlists').map(normalizePlaylist),
+      songs: songs.map(normalizeSong),
+      albums: albums.map(normalizeAlbum),
+      artists: artists.map(normalizeArtist),
+      playlists: playlists.map(normalizePlaylist),
     };
   },
 
   async searchSongs(query, limit = 20) {
-    const json = await request(`/api/v1/search/songs?q=${encodeURIComponent(query)}&limit=${limit}`);
-    return pickArray(json, 'songs', 'data.songs', 'data.results', 'results').map(normalizeSong);
+    const json = await request(`/api/search/songs?query=${encodeURIComponent(query)}&limit=${limit}`);
+    return resultsOf(json).map(normalizeSong);
   },
 
   async getSong(id) {
-    const json = await request(`/api/v1/songs/${encodeURIComponent(id)}`);
-    const raw = json.data || json.song || json;
-    return normalizeSong(Array.isArray(raw) ? raw[0] : raw);
+    const json = await request(`/api/songs/${encodeURIComponent(id)}`);
+    const raw = Array.isArray(json.data) ? json.data[0] : json.data;
+    return normalizeSong(raw);
   },
 
-  async getAlbum(id) {
-    const json = await request(`/api/v1/albums/${encodeURIComponent(id)}`);
-    return normalizeAlbum(json.data || json.album || json);
-  },
-
-  async getArtist(id) {
-    const json = await request(`/api/v1/artists/${encodeURIComponent(id)}`);
-    return normalizeArtist(json.data || json.artist || json);
-  },
-
-  async getPlaylist(id) {
-    const json = await request(`/api/v1/playlists/${encodeURIComponent(id)}`);
-    return normalizePlaylist(json.data || json.playlist || json);
-  },
-
-  async trending({ type = 'songs', limit = 20 } = {}) {
-    const json = await request(`/api/v1/trending?type=${type}&limit=${limit}`, { retries: 1 });
-    const arr = pickArray(json, 'data', 'trending', 'results', 'songs');
-    return type === 'songs' ? arr.map(normalizeSong) : type === 'albums' ? arr.map(normalizeAlbum) : arr.map(normalizeArtist);
-  },
-
-  async charts(limit = 20) {
-    const json = await request(`/api/v1/charts?limit=${limit}`, { retries: 1 });
-    return pickArray(json, 'data', 'charts', 'results').map(normalizePlaylist);
-  },
-
-  async newReleases(limit = 20) {
-    const json = await request(`/api/v1/albums/new?limit=${limit}`, { retries: 1 });
-    return pickArray(json, 'data', 'results', 'albums').map(normalizeAlbum);
+  async getSongLyrics(id) {
+    try {
+      const json = await request(`/api/songs/${encodeURIComponent(id)}/lyrics`, { retries: 0 });
+      return json.data?.lyrics || null;
+    } catch {
+      return null;
+    }
   },
 
   async recommendations(songId, limit = 12) {
-    const json = await request(`/api/v1/songs/${encodeURIComponent(songId)}/recommendations?limit=${limit}`, { retries: 1 });
-    return pickArray(json, 'data', 'results', 'songs').map(normalizeSong);
+    try {
+      const json = await request(`/api/songs/${encodeURIComponent(songId)}/suggestions?limit=${limit}`, { retries: 1 });
+      const arr = Array.isArray(json.data) ? json.data : [];
+      return arr.map(normalizeSong);
+    } catch {
+      return [];
+    }
   },
 
-  async featuredPlaylists(limit = 10) {
-    const json = await request(`/api/v1/playlists/featured?limit=${limit}`, { retries: 1 });
-    return pickArray(json, 'data', 'results', 'playlists').map(normalizePlaylist);
+  async getAlbum(id) {
+    const json = await request(`/api/albums?id=${encodeURIComponent(id)}`);
+    return normalizeAlbum(json.data);
+  },
+
+  async getArtist(id) {
+    const json = await request(`/api/artists/${encodeURIComponent(id)}`);
+    const artist = normalizeArtist(json.data);
+    // This API sometimes embeds topSongs/topAlbums directly, sometimes not —
+    // fall back to the dedicated endpoints if they came back empty.
+    if (!artist.topSongs.length) {
+      try {
+        const songsJson = await request(`/api/artists/${encodeURIComponent(id)}/songs?limit=12`, { retries: 1 });
+        artist.topSongs = resultsOf(songsJson).map(normalizeSong);
+      } catch { /* leave empty */ }
+    }
+    if (!artist.albums.length) {
+      try {
+        const albumsJson = await request(`/api/artists/${encodeURIComponent(id)}/albums?limit=12`, { retries: 1 });
+        artist.albums = resultsOf(albumsJson).map(normalizeAlbum);
+      } catch { /* leave empty */ }
+    }
+    return artist;
+  },
+
+  async getPlaylist(id) {
+    const json = await request(`/api/playlists?id=${encodeURIComponent(id)}`);
+    return normalizePlaylist(json.data);
   },
 };
 

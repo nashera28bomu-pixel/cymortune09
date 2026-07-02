@@ -58,13 +58,16 @@ class CymorPlayer extends EventTarget {
     return this.queue[this.index] || null;
   }
 
-  playSong(song, contextQueue = null) {
+  async playSong(song, contextQueue = null) {
+    song = await this._ensurePlayable(song);
     if (contextQueue && contextQueue.length) {
       this.queue = contextQueue;
       this.index = contextQueue.findIndex((s) => s.id === song.id);
       if (this.index === -1) {
         this.queue = [song, ...contextQueue];
         this.index = 0;
+      } else {
+        this.queue[this.index] = song;
       }
     } else {
       this.queue = [song];
@@ -76,14 +79,27 @@ class CymorPlayer extends EventTarget {
     this._recordHistory(song);
   }
 
-  playQueue(songs, startIndex = 0) {
+  async playQueue(songs, startIndex = 0) {
     if (!songs || !songs.length) return;
     this.queue = songs;
     this.index = startIndex;
+    const resolved = await this._ensurePlayable(this.queue[this.index]);
+    this.queue[this.index] = resolved;
     this._rebuildShuffleOrder();
-    this._loadSource(this.queue[this.index], { autoplay: true });
+    this._loadSource(resolved, { autoplay: true });
     this._persist();
-    this._recordHistory(this.queue[this.index]);
+    this._recordHistory(resolved);
+  }
+
+  /** Fetches full song details if a track came from a lighter-weight endpoint without a streamUrl. */
+  async _ensurePlayable(song) {
+    if (song.streamUrl) return song;
+    try {
+      const full = await CT_Api.getSong(song.id);
+      return full && full.streamUrl ? { ...song, ...full } : song;
+    } catch {
+      return song;
+    }
   }
 
   enqueueNext(song) {
@@ -151,7 +167,7 @@ class CymorPlayer extends EventTarget {
     this.audio.playbackRate = rate;
   }
 
-  next(userInitiated = true) {
+  async next(userInitiated = true) {
     if (!this.queue.length) return;
     if (this.repeatMode === REPEAT.ONE && !userInitiated) {
       this.audio.currentTime = 0;
@@ -164,12 +180,14 @@ class CymorPlayer extends EventTarget {
       return;
     }
     this.index = nextIdx;
-    this._loadSource(this.current(), { autoplay: true });
+    const resolved = await this._ensurePlayable(this.current());
+    this.queue[this.index] = resolved;
+    this._loadSource(resolved, { autoplay: true });
     this._persist();
-    this._recordHistory(this.current());
+    this._recordHistory(resolved);
   }
 
-  previous() {
+  async previous() {
     if (!this.queue.length) return;
     if (this.audio.currentTime > 3) {
       this.audio.currentTime = 0;
@@ -178,7 +196,9 @@ class CymorPlayer extends EventTarget {
     const prevIdx = this._prevIndex();
     if (prevIdx === null) return;
     this.index = prevIdx;
-    this._loadSource(this.current(), { autoplay: true });
+    const resolved = await this._ensurePlayable(this.current());
+    this.queue[this.index] = resolved;
+    this._loadSource(resolved, { autoplay: true });
     this._persist();
   }
 

@@ -327,38 +327,61 @@ function initKeyboardShortcuts() {
 
 const CT_Pages = {};
 
+// This backend has no discovery/trending/charts endpoint — only search and
+// lookup-by-id. These seed queries stand in for a "what's popular" feed by
+// running real searches behind the scenes. Swap/add terms any time.
+const HOME_SEED_QUERIES = ['Diamond Platnumz', 'Sauti Sol', 'Arijit Singh', 'Imagine Dragons', 'Burna Boy', 'Nyashinski'];
+
 CT_Pages.home = async function () {
   const root = document.querySelector('[data-page="home"]');
-  root.innerHTML = ['trending-songs', 'trending-albums', 'trending-artists', 'featured-playlists', 'recently-played', 'favorites', 'new-releases']
+  root.innerHTML = ['recently-played', 'favorites', 'discover-songs', 'discover-artists', 'popular-searches']
     .map((id) => `<div id="home-${id}"></div>`)
     .join('');
 
   renderHomeLocalSections();
+  renderPopularSearchChips();
 
-  const slots = [
-    { id: 'home-trending-songs', title: 'Trending Songs', fn: () => CT_Api.trending({ type: 'songs' }), render: (items) => items.map(songCard).join(''), type: 'songs' },
-    { id: 'home-trending-albums', title: 'Trending Albums', fn: () => CT_Api.trending({ type: 'albums' }), render: (items) => items.map(albumCard).join(''), type: 'albums' },
-    { id: 'home-trending-artists', title: 'Trending Artists', fn: () => CT_Api.trending({ type: 'artists' }), render: (items) => items.map(artistCard).join(''), type: 'artists' },
-    { id: 'home-featured-playlists', title: 'Featured Playlists', fn: () => CT_Api.featuredPlaylists(), render: (items) => items.map(playlistCard).join(''), type: 'playlists' },
-    { id: 'home-new-releases', title: 'New Releases', fn: () => CT_Api.newReleases(), render: (items) => items.map(albumCard).join(''), type: 'albums' },
-  ];
+  const seed = HOME_SEED_QUERIES[Math.floor(Math.random() * HOME_SEED_QUERIES.length)];
 
-  for (const slot of slots) {
-    const host = document.getElementById(slot.id);
-    host.innerHTML = section(slot.title, skeletonRow(6));
-    try {
-      const items = await slot.fn();
-      if (!items || !items.length) {
-        host.innerHTML = '';
-        continue;
-      }
-      host.innerHTML = section(slot.title, slot.render(items));
-      if (slot.type === 'songs') bindGlobalSongInteractions(host, items);
-    } catch (err) {
-      host.innerHTML = section(slot.title, `<div class="inline-error">${errorStateHtml(err)}</div>`);
-    }
+  const songsHost = document.getElementById('home-discover-songs');
+  songsHost.innerHTML = section(`Songs for "${seed}"`, skeletonRow(6));
+  try {
+    const songs = await CT_Api.searchSongs(seed, 10);
+    songsHost.innerHTML = songs.length ? section(`Songs for "${seed}"`, songs.map(songCard).join('')) : '';
+    bindGlobalSongInteractions(songsHost, songs);
+  } catch (err) {
+    songsHost.innerHTML = section(`Songs for "${seed}"`, `<div class="inline-error">${errorStateHtml(err)}</div>`);
+  }
+
+  const artistsHost = document.getElementById('home-discover-artists');
+  artistsHost.innerHTML = section('Artists to explore', skeletonRow(6));
+  try {
+    const results = await Promise.all(
+      HOME_SEED_QUERIES.slice(0, 6).map((q) => CT_Api.search(q, { limit: 1 }).then((r) => r.artists[0]).catch(() => null))
+    );
+    const artists = results.filter(Boolean);
+    artistsHost.innerHTML = artists.length ? section('Artists to explore', artists.map(artistCard).join('')) : '';
+  } catch {
+    artistsHost.innerHTML = '';
   }
 };
+
+function renderPopularSearchChips() {
+  const host = document.getElementById('home-popular-searches');
+  host.innerHTML = `
+    <div class="section">
+      <div class="section__head"><h2>Popular searches</h2></div>
+      <div class="chip-row">
+        ${HOME_SEED_QUERIES.map((q) => `<button class="chip" data-seed-query="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('')}
+      </div>
+    </div>`;
+  host.querySelectorAll('[data-seed-query]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      sessionStorage.setItem('ct_pending_query', chip.dataset.seedQuery);
+      router.navigate('/search');
+    });
+  });
+}
 
 function renderHomeLocalSections() {
   const recent = CT_Storage.History.recentlyPlayed().slice(0, 10);
@@ -503,19 +526,26 @@ CT_Pages.song = async function (id) {
   }
 };
 
-CT_Pages.showLyrics = function (song) {
+CT_Pages.showLyrics = async function (song) {
   const modal = document.getElementById('modal-host');
   modal.innerHTML = `
     <div class="sheet-backdrop" data-close-sheet>
       <div class="sheet sheet--lyrics">
         <div class="sheet__handle"></div>
         <h3>${escapeHtml(song.title)}</h3>
-        <div class="lyrics-body">${song.lyrics ? escapeHtml(song.lyrics).replace(/\n/g, '<br>') : 'Lyrics unavailable for this track.'}</div>
+        <div class="lyrics-body" id="lyrics-body">${skeletonRow(3, 'row')}</div>
       </div>
     </div>`;
   modal.querySelector('[data-close-sheet]').addEventListener('click', (e) => {
     if (e.target.hasAttribute('data-close-sheet')) CT_UI.closeModal();
   });
+  const body = document.getElementById('lyrics-body');
+  try {
+    const lyrics = await CT_Api.getSongLyrics(song.lyricsId || song.id);
+    body.innerHTML = lyrics ? escapeHtml(lyrics).replace(/\n/g, '<br>') : 'Lyrics unavailable for this track.';
+  } catch {
+    body.innerHTML = 'Lyrics unavailable for this track.';
+  }
 };
 
 CT_Pages.album = async function (id) {

@@ -330,41 +330,71 @@ const CT_Pages = {};
 // This backend has no discovery/trending/charts endpoint — only search and
 // lookup-by-id. These seed queries stand in for a "what's popular" feed by
 // running real searches behind the scenes. Swap/add terms any time.
-const HOME_SEED_QUERIES = ['Diamond Platnumz', 'Sauti Sol', 'Arijit Singh', 'Imagine Dragons', 'Burna Boy', 'Nyashinski'];
+const HOME_SEED_QUERIES = ['Diamond Platnumz', 'Sauti Sol', 'Arijit Singh', 'Imagine Dragons', 'Burna Boy', 'Nyashinski', 'Bollywood love songs', 'Afrobeats hits'];
+
+function pickSeeds(count) {
+  const shuffled = [...HOME_SEED_QUERIES].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 CT_Pages.home = async function () {
   const root = document.querySelector('[data-page="home"]');
-  root.innerHTML = ['recently-played', 'favorites', 'discover-songs', 'discover-artists', 'popular-searches']
-    .map((id) => `<div id="home-${id}"></div>`)
+  const [seedA, seedB, seedC] = pickSeeds(3);
+  root.innerHTML = [
+    'recently-played',
+    'favorites',
+    `songs-a::${seedA}`,
+    'artists',
+    `songs-b::${seedB}`,
+    'albums',
+    `songs-c::${seedC}`,
+    'popular-searches',
+  ]
+    .map((slot) => `<div id="home-${slot.split('::')[0]}" data-seed="${slot.split('::')[1] || ''}"></div>`)
     .join('');
 
   renderHomeLocalSections();
   renderPopularSearchChips();
 
-  const seed = HOME_SEED_QUERIES[Math.floor(Math.random() * HOME_SEED_QUERIES.length)];
+  // Three independent song rows, each seeded with a different query, so the
+  // page has real variety rather than one thin list.
+  document.querySelectorAll('[id^="home-songs-"]').forEach((host) => {
+    const seed = host.dataset.seed;
+    loadSongRow(host, seed);
+  });
 
-  const songsHost = document.getElementById('home-discover-songs');
-  songsHost.innerHTML = section(`Songs for "${seed}"`, skeletonRow(6));
-  try {
-    const songs = await CT_Api.searchSongs(seed, 10);
-    songsHost.innerHTML = songs.length ? section(`Songs for "${seed}"`, songs.map(songCard).join('')) : '';
-    bindGlobalSongInteractions(songsHost, songs);
-  } catch (err) {
-    songsHost.innerHTML = section(`Songs for "${seed}"`, `<div class="inline-error">${errorStateHtml(err)}</div>`);
-  }
-
-  const artistsHost = document.getElementById('home-discover-artists');
+  const artistsHost = document.getElementById('home-artists');
   artistsHost.innerHTML = section('Artists to explore', skeletonRow(6));
   try {
-    const results = await Promise.all(
-      HOME_SEED_QUERIES.slice(0, 6).map((q) => CT_Api.search(q, { limit: 1 }).then((r) => r.artists[0]).catch(() => null))
-    );
+    const results = await Promise.all(pickSeeds(6).map((q) => CT_Api.searchArtists(q, 1).then((r) => r[0]).catch(() => null)));
     const artists = results.filter(Boolean);
     artistsHost.innerHTML = artists.length ? section('Artists to explore', artists.map(artistCard).join('')) : '';
   } catch {
     artistsHost.innerHTML = '';
   }
+
+  const albumsHost = document.getElementById('home-albums');
+  albumsHost.innerHTML = section('Albums to explore', skeletonRow(6));
+  try {
+    const results = await Promise.all(pickSeeds(4).map((q) => CT_Api.searchAlbums(q, 2).catch(() => [])));
+    const albums = results.flat();
+    albumsHost.innerHTML = albums.length ? section('Albums to explore', albums.map(albumCard).join('')) : '';
+  } catch {
+    albumsHost.innerHTML = '';
+  }
 };
+
+async function loadSongRow(host, seed) {
+  const title = `Songs for "${seed}"`;
+  host.innerHTML = section(title, skeletonRow(6));
+  try {
+    const songs = await CT_Api.searchSongs(seed, 10);
+    host.innerHTML = songs.length ? section(title, songs.map(songCard).join('')) : '';
+    bindGlobalSongInteractions(host, songs);
+  } catch (err) {
+    host.innerHTML = section(title, `<div class="inline-error">${errorStateHtml(err)}</div>`);
+  }
+}
 
 function renderPopularSearchChips() {
   const host = document.getElementById('home-popular-searches');

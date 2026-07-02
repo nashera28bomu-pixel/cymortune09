@@ -6,17 +6,17 @@
  */
 
 const routes = [
-  { pattern: /^\/$|^\/home$/, template: 'pages/home.html', init: 'home', title: 'Home' },
-  { pattern: /^\/search$/, template: 'pages/search.html', init: 'search', title: 'Search' },
-  { pattern: /^\/song\/([^/]+)$/, template: 'pages/song.html', init: 'song', title: 'Now Playing' },
-  { pattern: /^\/album\/([^/]+)$/, template: 'pages/album.html', init: 'album', title: 'Album' },
-  { pattern: /^\/artist\/([^/]+)$/, template: 'pages/artist.html', init: 'artist', title: 'Artist' },
-  { pattern: /^\/playlist\/([^/]+)$/, template: 'pages/playlist.html', init: 'playlist', title: 'Playlist' },
-  { pattern: /^\/playlists$/, template: 'pages/playlist.html', init: 'playlistsIndex', title: 'Your Playlists' },
-  { pattern: /^\/favorites$/, template: 'pages/favorites.html', init: 'favorites', title: 'Favorites' },
-  { pattern: /^\/history$/, template: 'pages/history.html', init: 'history', title: 'History' },
-  { pattern: /^\/downloads$/, template: 'pages/downloads.html', init: 'downloads', title: 'Downloads' },
-  { pattern: /^\/settings$/, template: 'pages/settings.html', init: 'settings', title: 'Settings' },
+  { pattern: /^\/$|^\/home$/, template: '/pages/home.html', init: 'home', title: 'Home' },
+  { pattern: /^\/search$/, template: '/pages/search.html', init: 'search', title: 'Search' },
+  { pattern: /^\/song\/([^/]+)$/, template: '/pages/song.html', init: 'song', title: 'Now Playing' },
+  { pattern: /^\/album\/([^/]+)$/, template: '/pages/album.html', init: 'album', title: 'Album' },
+  { pattern: /^\/artist\/([^/]+)$/, template: '/pages/artist.html', init: 'artist', title: 'Artist' },
+  { pattern: /^\/playlist\/([^/]+)$/, template: '/pages/playlist.html', init: 'playlist', title: 'Playlist' },
+  { pattern: /^\/playlists$/, template: '/pages/playlist.html', init: 'playlistsIndex', title: 'Your Playlists' },
+  { pattern: /^\/favorites$/, template: '/pages/favorites.html', init: 'favorites', title: 'Favorites' },
+  { pattern: /^\/history$/, template: '/pages/history.html', init: 'history', title: 'History' },
+  { pattern: /^\/downloads$/, template: '/pages/downloads.html', init: 'downloads', title: 'Downloads' },
+  { pattern: /^\/settings$/, template: '/pages/settings.html', init: 'settings', title: 'Settings' },
 ];
 
 const templateCache = new Map();
@@ -109,7 +109,8 @@ class Router {
       <div class="empty-state">
         <div class="empty-state__icon">${offline ? '📡' : '⚠️'}</div>
         <h2>${offline ? "You're offline" : 'Something went wrong'}</h2>
-        <p>${offline ? 'Check your connection — anything you downloaded is still playable.' : 'That page could not load. Please try again.'}</p>
+        <p>${offline ? 'Check your connection — anything you downloaded is still playable.' : 'That page could not load.'}</p>
+        ${!offline && err?.message ? `<p class="muted" style="font-family:ui-monospace,monospace;font-size:11.5px;word-break:break-word;">${String(err.message).replace(/</g, '&lt;')}</p>` : ''}
         <button class="btn btn--primary" id="retry-render">Retry</button>
       </div>`;
     document.getElementById('retry-render')?.addEventListener('click', () => this._render(location.pathname, false));

@@ -205,6 +205,20 @@ function resultsOf(json) {
 
 /* ---------------- Public API ---------------- */
 
+/** Tries each candidate path in order, returning the first that doesn't 404/error.
+ *  Used for endpoints whose exact convention (path param vs ?id=) isn't confirmed. */
+async function requestFirstSuccess(paths) {
+  let lastErr;
+  for (const path of paths) {
+    try {
+      return await request(path, { retries: 0, useCache: true });
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 const Api = {
   /** Combined search across all four types, each with full field data. */
   async search(query, { limit = 15 } = {}) {
@@ -227,6 +241,16 @@ const Api = {
   async searchSongs(query, limit = 20) {
     const json = await request(`/api/search/songs?query=${encodeURIComponent(query)}&limit=${limit}`);
     return resultsOf(json).map(normalizeSong);
+  },
+
+  async searchAlbums(query, limit = 10) {
+    const json = await request(`/api/search/albums?query=${encodeURIComponent(query)}&limit=${limit}`);
+    return resultsOf(json).map(normalizeAlbum);
+  },
+
+  async searchArtists(query, limit = 10) {
+    const json = await request(`/api/search/artists?query=${encodeURIComponent(query)}&limit=${limit}`);
+    return resultsOf(json).map(normalizeArtist);
   },
 
   async getSong(id) {
@@ -255,24 +279,36 @@ const Api = {
   },
 
   async getAlbum(id) {
-    const json = await request(`/api/albums?id=${encodeURIComponent(id)}`);
-    return normalizeAlbum(json.data);
+    const json = await requestFirstSuccess([
+      `/api/albums?id=${encodeURIComponent(id)}`,
+      `/api/albums/${encodeURIComponent(id)}`,
+    ]);
+    return normalizeAlbum(Array.isArray(json.data) ? json.data[0] : json.data);
   },
 
   async getArtist(id) {
-    const json = await request(`/api/artists/${encodeURIComponent(id)}`);
-    const artist = normalizeArtist(json.data);
+    const json = await requestFirstSuccess([
+      `/api/artists/${encodeURIComponent(id)}`,
+      `/api/artists?id=${encodeURIComponent(id)}`,
+    ]);
+    const artist = normalizeArtist(Array.isArray(json.data) ? json.data[0] : json.data);
     // This API sometimes embeds topSongs/topAlbums directly, sometimes not —
     // fall back to the dedicated endpoints if they came back empty.
     if (!artist.topSongs.length) {
       try {
-        const songsJson = await request(`/api/artists/${encodeURIComponent(id)}/songs?limit=12`, { retries: 1 });
+        const songsJson = await requestFirstSuccess([
+          `/api/artists/${encodeURIComponent(id)}/songs?limit=12`,
+          `/api/artists/songs?id=${encodeURIComponent(id)}&limit=12`,
+        ]);
         artist.topSongs = resultsOf(songsJson).map(normalizeSong);
       } catch { /* leave empty */ }
     }
     if (!artist.albums.length) {
       try {
-        const albumsJson = await request(`/api/artists/${encodeURIComponent(id)}/albums?limit=12`, { retries: 1 });
+        const albumsJson = await requestFirstSuccess([
+          `/api/artists/${encodeURIComponent(id)}/albums?limit=12`,
+          `/api/artists/albums?id=${encodeURIComponent(id)}&limit=12`,
+        ]);
         artist.albums = resultsOf(albumsJson).map(normalizeAlbum);
       } catch { /* leave empty */ }
     }
@@ -280,8 +316,11 @@ const Api = {
   },
 
   async getPlaylist(id) {
-    const json = await request(`/api/playlists?id=${encodeURIComponent(id)}`);
-    return normalizePlaylist(json.data);
+    const json = await requestFirstSuccess([
+      `/api/playlists?id=${encodeURIComponent(id)}`,
+      `/api/playlists/${encodeURIComponent(id)}`,
+    ]);
+    return normalizePlaylist(Array.isArray(json.data) ? json.data[0] : json.data);
   },
 };
 

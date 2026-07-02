@@ -35,8 +35,11 @@ class Router {
   }
 
   start() {
-    const initial = CT_Storage.LastPage.get() || '/home';
-    const path = location.pathname === '/' || location.pathname.endsWith('index.html') ? '/home' : location.pathname;
+    let path = location.pathname;
+    if (path === '/' || path === '' || path.endsWith('index.html')) {
+      path = CT_Storage.LastPage.get() || '/home';
+      history.replaceState({}, '', path);
+    }
     this._render(path, true);
   }
 

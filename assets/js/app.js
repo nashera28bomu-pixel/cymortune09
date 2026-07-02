@@ -181,6 +181,7 @@ function initFullPlayer() {
     shuffle: document.getElementById('full-shuffle'),
     repeat: document.getElementById('full-repeat'),
     fav: document.getElementById('full-fav'),
+    download: document.getElementById('full-download'),
     speed: document.getElementById('full-speed'),
     volume: document.getElementById('full-volume'),
   };
@@ -191,6 +192,7 @@ function initFullPlayer() {
     els.title.textContent = song.title;
     els.artist.textContent = song.artist;
     els.fav.classList.toggle('is-active', CT_Storage.Favorites.has(song.id));
+    els.download.classList.toggle('is-active', CT_Storage.Downloads.has(song.id));
   }
 
   CT_Player.addEventListener('song-changed', (e) => render(e.detail.song));
@@ -225,6 +227,12 @@ function initFullPlayer() {
     if (!song) return;
     const nowFav = CT_Storage.Favorites.toggle(song);
     els.fav.classList.toggle('is-active', nowFav);
+  });
+  els.download.addEventListener('click', async () => {
+    const song = CT_Player.current();
+    if (!song) return;
+    await CT_Pages.downloadToggle(song);
+    els.download.classList.toggle('is-active', CT_Storage.Downloads.has(song.id));
   });
   document.getElementById('full-close')?.addEventListener('click', () => full.classList.remove('is-open'));
   document.getElementById('mini-expand')?.addEventListener('click', () => full.classList.add('is-open'));

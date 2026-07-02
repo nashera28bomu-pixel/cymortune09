@@ -303,6 +303,14 @@ const Api = {
         artist.topSongs = resultsOf(songsJson).map(normalizeSong);
       } catch { /* leave empty */ }
     }
+    // Last resort: the dedicated artist-songs endpoint convention on this
+    // deployment is unconfirmed and may never succeed — search by the
+    // artist's own name instead, since /api/search/songs is confirmed working.
+    if (!artist.topSongs.length && artist.name) {
+      try {
+        artist.topSongs = await Api.searchSongs(artist.name, 12);
+      } catch { /* leave empty */ }
+    }
     if (!artist.albums.length) {
       try {
         const albumsJson = await requestFirstSuccess([
@@ -310,6 +318,11 @@ const Api = {
           `/api/artists/albums?id=${encodeURIComponent(id)}&limit=12`,
         ]);
         artist.albums = resultsOf(albumsJson).map(normalizeAlbum);
+      } catch { /* leave empty */ }
+    }
+    if (!artist.albums.length && artist.name) {
+      try {
+        artist.albums = await Api.searchAlbums(artist.name, 12);
       } catch { /* leave empty */ }
     }
     return artist;

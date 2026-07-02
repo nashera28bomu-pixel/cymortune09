@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/((?!assets/|pages/|manifest.json|service-worker.js|robots.txt|sitemap.xml|.*\\.(?:js|css|svg|png|jpg|jpeg|webp|json|ico)$).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

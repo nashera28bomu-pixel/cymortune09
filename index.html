@@ -7,12 +7,58 @@
 <meta name="description" content="Cymor Tune is a premium music streaming app: search, stream and download any song, build playlists, and listen offline — no sign-up required.">
 <meta name="theme-color" content="#0B0910">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="assets/icons/icon-192.svg">
-<link rel="apple-touch-icon" href="assets/icons/icon-192.svg">
+<link rel="icon" href="/assets/icons/icon-192.svg">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/style.css">
+
+<!-- Loaded first, inline, before any external script: catches load/parse/runtime
+     errors in the app scripts themselves and shows them on-screen. This exists
+     because the primary dev workflow here is phone-only with no devtools access —
+     without this, a broken script just looks like "nothing happens". -->
+<style>
+  #ct-error-overlay { position: fixed; inset: 0; z-index: 99999; background: rgba(8,6,12,0.97); color: #f5f3fa; font: 13px/1.5 ui-monospace, monospace; padding: 20px; overflow-y: auto; display: none; }
+  #ct-error-overlay.is-visible { display: block; }
+  #ct-error-overlay h2 { font-family: sans-serif; color: #f87171; margin: 0 0 12px; font-size: 16px; }
+  #ct-error-overlay .ct-err-item { background: #1a1626; border: 1px solid #2d2740; border-radius: 8px; padding: 12px; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; }
+  #ct-error-overlay button { font-family: sans-serif; background: #8b5cf6; color: #fff; border: none; padding: 10px 18px; border-radius: 999px; font-weight: 600; margin-top: 8px; }
+</style>
+<script>
+  (function () {
+    var errors = [];
+    var overlay, list;
+    function ensureOverlay() {
+      if (overlay) return;
+      overlay = document.createElement('div');
+      overlay.id = 'ct-error-overlay';
+      overlay.innerHTML = '<h2>Cymor Tune hit an error</h2><p style="font-family:sans-serif;color:#c9c2dc">Screenshot this and send it back — it tells us exactly what broke.</p><div id="ct-err-list"></div><button id="ct-err-dismiss">Dismiss</button>';
+      document.documentElement.appendChild(overlay);
+      list = overlay.querySelector('#ct-err-list');
+      overlay.querySelector('#ct-err-dismiss').addEventListener('click', function () {
+        overlay.classList.remove('is-visible');
+      });
+    }
+    function report(message) {
+      errors.push(message);
+      ensureOverlay();
+      var item = document.createElement('div');
+      item.className = 'ct-err-item';
+      item.textContent = message;
+      list.appendChild(item);
+      overlay.classList.add('is-visible');
+    }
+    window.CT_reportError = report;
+    window.addEventListener('error', function (e) {
+      var src = e.filename ? e.filename.split('/').pop() : 'unknown file';
+      report((e.message || 'Script error') + '\n  at ' + src + ':' + (e.lineno || '?'));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      report('Unhandled promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    });
+  })();
+</script>
 </head>
 <body>
 
@@ -174,7 +220,7 @@
   <!-- Mini player -->
   <div id="mini-player" class="mini-player" hidden>
     <div class="mini-player__progress" id="mini-progress-track"><div class="mini-player__progress-bar" id="mini-progress-bar"></div></div>
-    <img id="mini-art" class="mini-player__art" src="assets/images/placeholder-art.svg" alt="">
+    <img id="mini-art" class="mini-player__art" src="/assets/images/placeholder-art.svg" alt="">
     <div class="mini-player__meta" id="mini-expand">
       <div id="mini-title" class="mini-player__title">—</div>
       <div id="mini-artist" class="mini-player__artist">—</div>
@@ -196,7 +242,7 @@
       </button>
     </div>
     <div class="full-player__art-wrap">
-      <img id="full-art" class="full-player__art" src="assets/images/placeholder-art.svg" alt="">
+      <img id="full-art" class="full-player__art" src="/assets/images/placeholder-art.svg" alt="">
     </div>
     <div class="full-player__meta">
       <h2 id="full-title">—</h2>
@@ -240,11 +286,11 @@
 <div id="modal-host"></div>
 
 <!-- ============== SCRIPTS ============== -->
-<script src="assets/js/storage.js"></script>
-<script src="assets/js/api.js"></script>
-<script src="assets/js/player.js"></script>
-<script src="assets/js/ui.js"></script>
-<script src="assets/js/router.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="/assets/js/storage.js"></script>
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/player.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/router.js"></script>
+<script src="/assets/js/app.js"></script>
 </body>
 </html>

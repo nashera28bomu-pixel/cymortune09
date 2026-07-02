@@ -10,7 +10,7 @@
  *  - cymor-tune-audio   : explicit user downloads (written by app.js)
  */
 
-const SHELL_CACHE = 'cymor-tune-shell-v1';
+const SHELL_CACHE = 'cymor-tune-shell-v2';
 const RUNTIME_CACHE = 'cymor-tune-runtime';
 const AUDIO_CACHE = 'cymor-tune-audio';
 

@@ -203,6 +203,24 @@ function resultsOf(json) {
   return [];
 }
 
+// JioSaavn's catalog is full of "ZZang KARAOKE"-style instrumental/tribute
+// covers that match an artist's name in their title without being an
+// actual track by that artist (e.g. "Doja (By Central Cee) (Melody
+// Karaoke Version)" by "ZZang KARAOKE"). These are real matches by JioSaavn's
+// own search relevance, but they're noise for anyone just trying to hear
+// the song, so filter them out by default rather than showing them.
+const JUNK_SONG_PATTERN = /karaoke|instrumental version|originally (perfomed|performed)|tribute to|in the style of|made famous by|backing track|cover version/i;
+
+function isLikelyJunkSong(song) {
+  return JUNK_SONG_PATTERN.test(song.title || '') || JUNK_SONG_PATTERN.test(song.album || '') || JUNK_SONG_PATTERN.test(song.artist || '');
+}
+
+/** Drops obvious karaoke/tribute noise, but never returns an empty list if that's all there was. */
+function preferAuthentic(songs) {
+  const clean = songs.filter((s) => !isLikelyJunkSong(s));
+  return clean.length ? clean : songs;
+}
+
 /* ---------------- Public API ---------------- */
 
 /** Tries each candidate path in order, returning the first that doesn't 404/error.
@@ -231,7 +249,7 @@ const Api = {
       request(`/api/search/playlists?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
     ]);
     return {
-      songs: songs.map(normalizeSong),
+      songs: preferAuthentic(songs.map(normalizeSong)),
       albums: albums.map(normalizeAlbum),
       artists: artists.map(normalizeArtist),
       playlists: playlists.map(normalizePlaylist),
@@ -240,7 +258,7 @@ const Api = {
 
   async searchSongs(query, limit = 20) {
     const json = await request(`/api/search/songs?query=${encodeURIComponent(query)}&limit=${limit}`);
-    return resultsOf(json).map(normalizeSong);
+    return preferAuthentic(resultsOf(json).map(normalizeSong));
   },
 
   async searchAlbums(query, limit = 10) {
@@ -272,7 +290,7 @@ const Api = {
     try {
       const json = await request(`/api/songs/${encodeURIComponent(songId)}/suggestions?limit=${limit}`, { retries: 1 });
       const arr = Array.isArray(json.data) ? json.data : [];
-      return arr.map(normalizeSong);
+      return preferAuthentic(arr.map(normalizeSong));
     } catch {
       return [];
     }
@@ -300,7 +318,7 @@ const Api = {
           `/api/artists/${encodeURIComponent(id)}/songs?limit=12`,
           `/api/artists/songs?id=${encodeURIComponent(id)}&limit=12`,
         ]);
-        artist.topSongs = resultsOf(songsJson).map(normalizeSong);
+        artist.topSongs = preferAuthentic(resultsOf(songsJson).map(normalizeSong));
       } catch { /* leave empty */ }
     }
     // Last resort: the dedicated artist-songs endpoint convention on this

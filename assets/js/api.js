@@ -243,13 +243,13 @@ const Api = {
     if (!query || !query.trim()) return { songs: [], albums: [], artists: [], playlists: [] };
     const q = encodeURIComponent(query.trim());
     const [songs, albums, artists, playlists] = await Promise.all([
-      request(`/api/search/songs?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
+      Api.searchSongs(query, limit).catch(() => []),
       request(`/api/search/albums?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
       request(`/api/search/artists?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
       request(`/api/search/playlists?query=${q}&limit=${limit}`).then(resultsOf).catch(() => []),
     ]);
     return {
-      songs: preferAuthentic(songs.map(normalizeSong)),
+      songs,
       albums: albums.map(normalizeAlbum),
       artists: artists.map(normalizeArtist),
       playlists: playlists.map(normalizePlaylist),
@@ -257,8 +257,15 @@ const Api = {
   },
 
   async searchSongs(query, limit = 20) {
-    const json = await request(`/api/search/songs?query=${encodeURIComponent(query)}&limit=${limit}`);
-    return preferAuthentic(resultsOf(json).map(normalizeSong));
+    // Fetch a deeper pool than requested: on artists with a thin catalog on
+    // this backend, the first ~12 results can be almost entirely karaoke/
+    // tribute covers, which used to starve the filter below and trigger its
+    // "don't return empty" fallback — showing 100% junk. Fetching more first
+    // gives real tracks buried further down a chance to surface.
+    const fetchLimit = Math.max(limit * 3, 30);
+    const json = await request(`/api/search/songs?query=${encodeURIComponent(query)}&limit=${fetchLimit}`);
+    const all = resultsOf(json).map(normalizeSong);
+    return preferAuthentic(all).slice(0, limit);
   },
 
   async searchAlbums(query, limit = 10) {

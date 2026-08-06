@@ -75,7 +75,7 @@ function buildKeyLoader() {
   }
 }
 
-const LOAD_DURATION_MS = 40000;
+const LOAD_DURATION_MS = 20000;
 const LOAD_LABELS = [
   'warming up the strings',
   'tuning the frequencies',

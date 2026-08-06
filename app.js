@@ -75,7 +75,7 @@ function buildKeyLoader() {
   }
 }
 
-const LOAD_DURATION_MS = 10000;
+const LOAD_DURATION_MS = 40000;
 const LOAD_LABELS = [
   'warming up the strings',
   'tuning the frequencies',
@@ -300,14 +300,30 @@ function playAudio(track) {
   const sheet = document.getElementById('playerSheet');
   const audioEl = document.getElementById('audioEl');
   const quality = settings.audioQuality;
+  const streamUrl = api(`/api/stream?type=audio&url=${encodeURIComponent(track.url)}&quality=${quality}`);
 
   document.getElementById('playerThumb').src = track.thumbnail || '';
   document.getElementById('playerTitle').textContent = track.title;
   document.getElementById('playerChannel').textContent = track.channel || '';
 
-  audioEl.src = api(`/api/stream?type=audio&url=${encodeURIComponent(track.url)}&quality=${quality}`);
+  audioEl.src = streamUrl;
   sheet.classList.remove('hidden');
   audioEl.play().catch(() => showToast('Tap play to start audio.'));
+
+  // The <audio> element fails silently (stuck at 0:00) if the backend
+  // returns a JSON error instead of a real audio stream. On error, re-fetch
+  // the same URL as JSON to surface the actual reason instead of hiding it.
+  audioEl.onerror = async () => {
+    try {
+      const res = await fetch(streamUrl);
+      const data = await res.json().catch(() => null);
+      showToast(data?.error || 'Playback failed. The provider did not return an audio file.');
+      if (data?.provider_response) console.error('[Cymor Tune] Provider response:', data.provider_response);
+    } catch {
+      showToast('Playback failed. Check your connection and try again.');
+    }
+    sheet.classList.add('hidden');
+  };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -326,26 +342,34 @@ async function downloadTrack(track, type, quality) {
   showOverlay(`Preparing your ${type === 'audio' ? 'MP3' : 'MP4'} (${type === 'audio' ? quality + ' kbps' : quality + 'p'})…`);
   try {
     const downloadUrl = api(`/api/stream?type=${type}&url=${encodeURIComponent(track.url)}&quality=${quality}&download=true`);
+    const res = await fetch(downloadUrl);
+    const contentType = res.headers.get('content-type') || '';
 
+    if (!res.ok || contentType.includes('application/json')) {
+      const data = await res.json().catch(() => null);
+      showToast(data?.error || 'Download failed. The provider did not return a file.');
+      if (data?.provider_response) console.error('[Cymor Tune] Provider response:', data.provider_response);
+      return;
+    }
+
+    // Real file — pull it into a blob and trigger a save dialog.
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = downloadUrl;
+    link.href = objectUrl;
     link.download = `${track.title || 'cymor-tune-track'}.${type === 'audio' ? 'mp3' : 'mp4'}`;
     document.body.appendChild(link);
     link.click();
     link.remove();
+    URL.revokeObjectURL(objectUrl);
 
-    const entry = {
-      ...track,
-      type,
-      quality,
-      downloadedAt: Date.now()
-    };
+    const entry = { ...track, type, quality, downloadedAt: Date.now() };
     downloads.unshift(entry);
     store.set(KEYS.DOWNLOADS, downloads);
-    showToast('Download started.');
+    showToast('Download complete.');
   } catch (err) {
     console.error(err);
-    showToast('Download failed. Please try again.');
+    showToast('Download failed. Check your connection and try again.');
   } finally {
     hideOverlay();
   }

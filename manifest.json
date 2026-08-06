@@ -1,17 +1,22 @@
 {
-  "name": "Cymor Tune — Music Without Borders",
+  "name": "Cymor Tune",
   "short_name": "Cymor Tune",
-  "description": "Search, stream, download and organize music offline. No sign-up required.",
-  "start_url": "/index.html",
-  "scope": "/",
+  "description": "Stream and download music — built by Cymor Tech Services.",
+  "start_url": "index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#0b0910",
-  "theme_color": "#0b0910",
-  "categories": ["music", "entertainment"],
+  "background_color": "#0a0910",
+  "theme_color": "#0a0910",
+  "orientation": "portrait",
   "icons": [
-    { "src": "assets/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "assets/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "assets/icons/icon-maskable.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230a0910'/%3E%3Ctext x='50%25' y='58%25' font-size='96' text-anchor='middle' fill='%23f2b705'%3E%E2%99%AA%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230a0910'/%3E%3Ctext x='50%25' y='58%25' font-size='256' text-anchor='middle' fill='%23f2b705'%3E%E2%99%AA%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
   ]
 }

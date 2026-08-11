@@ -3,172 +3,1209 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
 <title>Cymor Tune</title>
-<meta name="description" content="Stream and download music, powered by Cymor Tech Services." />
-<meta name="theme-color" content="#0A0910" />
+
+<meta
+  name="description"
+  content="Cymor Tune — discover, stream and download your favorite music."
+/>
+
+<meta name="theme-color" content="#09080f" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
 <link rel="manifest" href="manifest.json" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>" />
+
+<link
+  rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>"
+/>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
 <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
-<!-- ============================= LANDING / LOADER ============================= -->
+<!-- =========================================================
+     LANDING / SPLASH
+========================================================= -->
+
 <section id="landing" class="landing">
-  <div class="notes-field" id="notesField" aria-hidden="true"></div>
+
+  <div
+    class="notes-field"
+    id="notesField"
+    aria-hidden="true"
+  ></div>
+
+  <div class="landing-glow landing-glow-one"></div>
+  <div class="landing-glow landing-glow-two"></div>
 
   <div class="landing-content">
-    <div class="brand">
-      <span class="brand-mark">♪</span>
-      <h1 class="brand-name">Cymor <em>Tune</em></h1>
-    </div>
-    <p class="brand-tagline">Tuning in your sound&hellip;</p>
 
-    <div class="key-loader" id="keyLoader" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="brand">
+
+      <div class="brand-mark-wrap">
+        <span class="brand-mark">♪</span>
+      </div>
+
+      <h1 class="brand-name">
+        Cymor <em>Tune</em>
+      </h1>
+
+    </div>
+
+    <p class="brand-tagline">
+      Tuning in your sound<span class="typing-dots">...</span>
+    </p>
+
+    <div
+      class="key-loader"
+      id="keyLoader"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+    >
       <div class="keys" id="keysRow"></div>
     </div>
 
     <div class="loader-readout">
-      <span class="loader-percent" id="loaderPercent">00%</span>
-      <span class="loader-label" id="loaderLabel">warming up the strings</span>
+
+      <span
+        class="loader-percent"
+        id="loaderPercent"
+      >
+        00%
+      </span>
+
+      <span
+        class="loader-label"
+        id="loaderLabel"
+      >
+        warming up the strings
+      </span>
+
     </div>
 
-    <button class="skip-btn" id="skipLoader" type="button">Skip</button>
+    <button
+      class="skip-btn"
+      id="skipLoader"
+      type="button"
+    >
+      Skip
+    </button>
+
   </div>
+
 </section>
 
-<!-- ============================= APP SHELL ============================= -->
+
+<!-- =========================================================
+     MAIN APPLICATION
+========================================================= -->
+
 <div id="app" class="app hidden">
 
-  <!-- ---------- HOME ---------- -->
-  <section id="view-home" class="view active-view">
-    <header class="topbar">
+
+  <!-- =======================================================
+       HOME
+  ======================================================== -->
+
+  <section
+    id="view-home"
+    class="view active-view"
+  >
+
+    <header class="topbar home-topbar">
+
       <div class="topbar-brand">
-        <span class="topbar-mark">♪</span>
-        <span>Cymor Tune</span>
+
+        <div class="topbar-logo">
+          ♪
+        </div>
+
+        <div class="topbar-brand-text">
+          <span class="topbar-title">
+            Cymor <strong>Tune</strong>
+          </span>
+
+          <span class="topbar-subtitle">
+            Your sound. Your way.
+          </span>
+        </div>
+
       </div>
+
+      <div class="topbar-status">
+        <span class="status-dot"></span>
+        <span>Online</span>
+      </div>
+
     </header>
 
+
+    <!-- HOME HERO -->
+
+    <div class="home-hero">
+
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        MUSIC WITHOUT THE FRICTION
+      </div>
+
+      <h2 class="hero-title">
+        Find the sound
+        <span>you love.</span>
+      </h2>
+
+      <p class="hero-description">
+        Search songs, artists and YouTube videos.
+        Stream instantly or download for later.
+      </p>
+
+    </div>
+
+
+    <!-- SEARCH -->
+
     <div class="search-wrap">
-      <form id="searchForm" class="search-bar" autocomplete="off">
-        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="searchInput" type="text" placeholder="Search a song, artist, or paste a link…" required />
+
+      <form
+        id="searchForm"
+        class="search-bar"
+        autocomplete="off"
+      >
+
+        <div class="search-icon-wrap">
+
+          <svg
+            class="search-icon"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+            />
+
+            <line
+              x1="21"
+              y1="21"
+              x2="16.65"
+              y2="16.65"
+            />
+          </svg>
+
+        </div>
+
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search a song, artist, or paste a link..."
+          aria-label="Search music"
+          required
+        />
+
+        <button
+          class="search-submit"
+          type="submit"
+          aria-label="Search"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+            width="19"
+            height="19"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M5 12h14" />
+            <path d="M13 6l6 6-6 6" />
+          </svg>
+
+        </button>
+
       </form>
+
+      <div class="search-hint">
+        <span>⌘</span>
+        Search anything
+      </div>
+
     </div>
 
-    <div id="homeContent" class="home-content">
-      <div class="empty-state">
-        <span class="empty-glyph">♫</span>
-        <p>Search any song, artist, or YouTube link to get started.</p>
+
+    <!-- SEARCH RESULTS -->
+
+    <div
+      id="homeContent"
+      class="home-content"
+    >
+
+      <div class="empty-state home-empty-state">
+
+        <div class="empty-art">
+
+          <div class="empty-note note-one">♪</div>
+          <div class="empty-note note-two">♫</div>
+          <div class="empty-note note-three">♬</div>
+
+          <div class="empty-disc">
+            <span>♪</span>
+          </div>
+
+        </div>
+
+        <h3>
+          Your next favorite song
+        </h3>
+
+        <p>
+          Search for a song, artist, or paste a
+          YouTube link to get started.
+        </p>
+
       </div>
+
     </div>
+
   </section>
 
-  <!-- ---------- DOWNLOADS ---------- -->
-  <section id="view-downloads" class="view">
-    <header class="topbar"><div class="topbar-brand"><span>Downloads</span></div></header>
-    <div id="downloadsList" class="list-content">
-      <div class="empty-state">
-        <span class="empty-glyph">⬇</span>
-        <p>Nothing downloaded yet. Tracks you save will show up here.</p>
+
+
+  <!-- =======================================================
+       DOWNLOADS
+  ======================================================== -->
+
+  <section
+    id="view-downloads"
+    class="view"
+  >
+
+    <header class="topbar">
+
+      <div class="topbar-heading">
+
+        <span class="section-eyebrow">
+          YOUR MUSIC
+        </span>
+
+        <h1 class="section-title">
+          Downloads
+        </h1>
+
       </div>
+
+      <div class="section-icon">
+
+        <svg
+          viewBox="0 0 24 24"
+          width="21"
+          height="21"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 3v12" />
+          <path d="M7 11l5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
+
+      </div>
+
+    </header>
+
+
+    <div
+      id="downloadsList"
+      class="list-content"
+    >
+
+      <div class="empty-state">
+
+        <div class="empty-icon-circle">
+          <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M12 3v12" />
+            <path d="M7 11l5 5 5-5" />
+            <path d="M5 21h14" />
+          </svg>
+        </div>
+
+        <h3>
+          Nothing here yet
+        </h3>
+
+        <p>
+          Songs you download will appear here
+          for quick access.
+        </p>
+
+      </div>
+
     </div>
+
   </section>
 
-  <!-- ---------- LIBRARY ---------- -->
-  <section id="view-library" class="view">
-    <header class="topbar"><div class="topbar-brand"><span>Library</span></div></header>
-    <div id="libraryList" class="list-content">
-      <div class="empty-state">
-        <span class="empty-glyph">♥</span>
-        <p>Your library is empty. Tap the heart on any track to save it here.</p>
+
+
+  <!-- =======================================================
+       LIBRARY
+  ======================================================== -->
+
+  <section
+    id="view-library"
+    class="view"
+  >
+
+    <header class="topbar">
+
+      <div class="topbar-heading">
+
+        <span class="section-eyebrow">
+          COLLECTION
+        </span>
+
+        <h1 class="section-title">
+          Your Library
+        </h1>
+
       </div>
+
+      <div class="section-icon">
+
+        <svg
+          viewBox="0 0 24 24"
+          width="21"
+          height="21"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
+          <path d="M20.8 8.8c0 5.5-8.8 10.2-8.8 10.2S3.2 14.3 3.2 8.8A4.7 4.7 0 018 4.1c1.7 0 3.2.9 4 2.2a4.7 4.7 0 014-2.2 4.7 4.7 0 014.8 4.7z" />
+        </svg>
+
+      </div>
+
+    </header>
+
+
+    <div
+      id="libraryList"
+      class="list-content"
+    >
+
+      <div class="empty-state">
+
+        <div class="empty-icon-circle">
+
+          <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M20.8 8.8c0 5.5-8.8 10.2-8.8 10.2S3.2 14.3 3.2 8.8A4.7 4.7 0 018 4.1c1.7 0 3.2.9 4 2.2a4.7 4.7 0 014-2.2 4.7 4.7 0 014.8 4.7z" />
+          </svg>
+
+        </div>
+
+        <h3>
+          Your library is waiting
+        </h3>
+
+        <p>
+          Save songs you love and they'll stay here
+          for whenever you want them.
+        </p>
+
+      </div>
+
     </div>
+
   </section>
 
-  <!-- ---------- SETTINGS ---------- -->
-  <section id="view-settings" class="view">
-    <header class="topbar"><div class="topbar-brand"><span>Settings</span></div></header>
+
+
+  <!-- =======================================================
+       SETTINGS
+  ======================================================== -->
+
+  <section
+    id="view-settings"
+    class="view"
+  >
+
+    <header class="topbar settings-topbar">
+
+      <div class="topbar-heading">
+
+        <span class="section-eyebrow">
+          PERSONALIZE
+        </span>
+
+        <h1 class="section-title">
+          Settings
+        </h1>
+
+      </div>
+
+      <div class="section-icon">
+
+        <svg
+          viewBox="0 0 24 24"
+          width="21"
+          height="21"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+
+        </svg>
+
+      </div>
+
+    </header>
+
+
     <div class="settings-content">
 
-      <div class="settings-card">
-        <h3>Playback</h3>
-        <div class="settings-row">
-          <span>Default audio quality</span>
-          <select id="defaultAudioQuality" class="settings-select">
-            <option value="128">128 kbps</option>
-            <option value="320">320 kbps</option>
-          </select>
+
+      <!-- APPEARANCE -->
+
+      <div class="settings-section">
+
+        <div class="settings-section-heading">
+
+          <span class="settings-section-icon">
+            ◐
+          </span>
+
+          <div>
+            <h3>
+              Appearance
+            </h3>
+
+            <p>
+              Make Cymor Tune feel like yours.
+            </p>
+          </div>
+
         </div>
-        <div class="settings-row">
-          <span>Default video quality</span>
-          <select id="defaultVideoQuality" class="settings-select">
-            <option value="360">360p</option>
-            <option value="720">720p</option>
-            <option value="1080">1080p</option>
-          </select>
+
+
+        <div class="settings-card appearance-card">
+
+          <div class="settings-row appearance-row">
+
+            <div class="settings-row-info">
+
+              <div class="settings-row-icon theme-icon">
+                ☼
+              </div>
+
+              <div>
+
+                <strong>
+                  Theme
+                </strong>
+
+                <span>
+                  Choose how Cymor Tune looks.
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="theme-switcher"
+              role="group"
+              aria-label="Theme"
+            >
+
+              <button
+                type="button"
+                class="theme-option active"
+                data-theme="dark"
+              >
+                <span>☾</span>
+                Dark
+              </button>
+
+              <button
+                type="button"
+                class="theme-option"
+                data-theme="light"
+              >
+                <span>☀</span>
+                Light
+              </button>
+
+            </div>
+
+          </div>
+
         </div>
+
       </div>
 
-      <div class="settings-card about-card">
-        <h3>About</h3>
-        <div class="settings-row"><span>App</span><span>Cymor Tune v1.0</span></div>
-        <div class="settings-row"><span>Developer</span><span>Legendary Smiley Cymor</span></div>
-        <div class="settings-row"><span>Idea by</span><span>Joyce</span></div>
-        <p class="about-footnote">Built by Cymor Tech Services &mdash; Nairobi, Kenya.</p>
+
+
+      <!-- ABOUT CYMOR TUNE -->
+
+      <div class="settings-section">
+
+        <div class="settings-section-heading">
+
+          <span class="settings-section-icon">
+            ♪
+          </span>
+
+          <div>
+
+            <h3>
+              About Cymor Tune
+            </h3>
+
+            <p>
+              A little bit about the app.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="about-hero-card">
+
+          <div class="about-logo">
+            ♪
+          </div>
+
+          <div class="about-hero-text">
+
+            <h2>
+              Cymor <span>Tune</span>
+            </h2>
+
+            <p>
+              Discover. Stream. Download.
+            </p>
+
+            <div class="version-badge">
+              VERSION 1.0
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="settings-card about-card">
+
+          <div class="about-description">
+
+            <p>
+              Cymor Tune is built to make discovering
+              and enjoying music simple, fast and
+              beautiful.
+            </p>
+
+            <p>
+              Search for music, stream your favorite
+              tracks and keep the songs you love close.
+            </p>
+
+          </div>
+
+        </div>
+
       </div>
+
+
+
+      <!-- CREATOR -->
+
+      <div class="settings-section">
+
+        <div class="settings-section-heading">
+
+          <span class="settings-section-icon">
+            ✦
+          </span>
+
+          <div>
+
+            <h3>
+              The People Behind It
+            </h3>
+
+            <p>
+              Built with creativity and friendship.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="creator-card">
+
+          <div class="creator-avatar">
+            SC
+          </div>
+
+          <div class="creator-info">
+
+            <span class="creator-role">
+              DEVELOPER
+            </span>
+
+            <h3>
+              Legendary Smiley Cymor
+            </h3>
+
+            <p>
+              Building ideas into real digital
+              experiences.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="idea-card">
+
+          <div class="idea-icon">
+            ♡
+          </div>
+
+          <div class="idea-content">
+
+            <span class="idea-label">
+              IDEA BY
+            </span>
+
+            <h3>
+              Joyce
+            </h3>
+
+            <p>
+              My best friend.
+            </p>
+
+          </div>
+
+          <div class="idea-spark">
+            ✦
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- CYMOR TECH SERVICES -->
+
+      <div class="settings-section">
+
+        <div class="settings-section-heading">
+
+          <span class="settings-section-icon">
+            ◈
+          </span>
+
+          <div>
+
+            <h3>
+              Built by Cymor
+            </h3>
+
+            <p>
+              Technology behind the experience.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="company-card">
+
+          <div class="company-logo">
+            C
+          </div>
+
+          <div class="company-info">
+
+            <span class="company-label">
+              CYMOR TECH SERVICES
+            </span>
+
+            <h3>
+              Technology. Creativity. Innovation.
+            </h3>
+
+            <p>
+              Building useful digital products
+              for the next generation.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- APP INFO -->
+
+      <div class="settings-section">
+
+        <div class="settings-section-heading">
+
+          <span class="settings-section-icon">
+            ⓘ
+          </span>
+
+          <div>
+
+            <h3>
+              App Information
+            </h3>
+
+            <p>
+              Technical information.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="settings-card info-card">
+
+          <div class="settings-row">
+
+            <div class="settings-row-info">
+
+              <span>
+                App
+              </span>
+
+            </div>
+
+            <span class="settings-value">
+              Cymor Tune
+            </span>
+
+          </div>
+
+
+          <div class="settings-row">
+
+            <div class="settings-row-info">
+
+              <span>
+                Version
+              </span>
+
+            </div>
+
+            <span class="settings-value">
+              1.0.0
+            </span>
+
+          </div>
+
+
+          <div class="settings-row">
+
+            <div class="settings-row-info">
+
+              <span>
+                Platform
+              </span>
+
+            </div>
+
+            <span class="settings-value">
+              Web / PWA
+            </span>
+
+          </div>
+
+
+          <div class="settings-row">
+
+            <div class="settings-row-info">
+
+              <span>
+                Built with
+              </span>
+
+            </div>
+
+            <span class="settings-value">
+              Cymor Tech Services
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- FOOTER -->
+
+      <div class="settings-footer">
+
+        <div class="footer-logo">
+          ♪
+        </div>
+
+        <p class="footer-brand">
+          Cymor <strong>Tune</strong>
+        </p>
+
+        <p class="footer-tagline">
+          Made with music, code & creativity.
+        </p>
+
+        <p class="footer-copyright">
+          © 2026 Cymor Tech Services
+        </p>
+
+        <p class="footer-location">
+          Nairobi, Kenya 🇰🇪
+        </p>
+
+      </div>
+
 
     </div>
+
   </section>
 
-  <!-- ---------- BOTTOM NAV ---------- -->
+
+
+  <!-- =======================================================
+       BOTTOM NAVIGATION
+  ======================================================== -->
+
   <nav class="bottom-nav">
-    <button class="nav-btn active" data-view="home" type="button">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-      <span>Home</span>
+
+    <button
+      class="nav-btn active"
+      data-view="home"
+      type="button"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+
+        <path d="M3 11l9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+
+      </svg>
+
+      <span>
+        Home
+      </span>
+
     </button>
-    <button class="nav-btn" data-view="downloads" type="button">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
-      <span>Downloads</span>
+
+
+    <button
+      class="nav-btn"
+      data-view="downloads"
+      type="button"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+
+        <path d="M12 3v12" />
+        <path d="M7 11l5 5 5-5" />
+        <path d="M5 21h14" />
+
+      </svg>
+
+      <span>
+        Downloads
+      </span>
+
     </button>
-    <button class="nav-btn" data-view="library" type="button">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="2" width="4" height="18"/></svg>
-      <span>Library</span>
+
+
+    <button
+      class="nav-btn"
+      data-view="library"
+      type="button"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+
+        <rect
+          x="3"
+          y="4"
+          width="4"
+          height="16"
+        />
+
+        <rect
+          x="10"
+          y="8"
+          width="4"
+          height="12"
+        />
+
+        <rect
+          x="17"
+          y="2"
+          width="4"
+          height="18"
+        />
+
+      </svg>
+
+      <span>
+        Library
+      </span>
+
     </button>
-    <button class="nav-btn" data-view="settings" type="button">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Settings</span>
+
+
+    <button
+      class="nav-btn"
+      data-view="settings"
+      type="button"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+      >
+
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+
+      </svg>
+
+      <span>
+        Settings
+      </span>
+
     </button>
+
   </nav>
+
 </div>
 
-<!-- ============================= OVERLAY (search / resolve / download progress) ============================= -->
-<div id="overlay" class="overlay hidden">
+
+
+<!-- =========================================================
+     GLOBAL LOADING OVERLAY
+========================================================= -->
+
+<div
+  id="overlay"
+  class="overlay hidden"
+  aria-live="polite"
+>
+
   <div class="overlay-card">
-    <div class="mini-eq" id="miniEq"></div>
-    <p class="overlay-text" id="overlayText">Searching&hellip;</p>
+
+    <div
+      class="mini-eq"
+      id="miniEq"
+      aria-hidden="true"
+    ></div>
+
+    <p
+      class="overlay-text"
+      id="overlayText"
+    >
+      Searching...
+    </p>
+
+    <span class="overlay-subtext">
+      Cymor Tune
+    </span>
+
   </div>
+
 </div>
 
-<!-- ============================= TOAST ============================= -->
-<div id="toast" class="toast hidden"></div>
 
-<!-- ============================= NOW PLAYING SHEET ============================= -->
-<div id="playerSheet" class="player-sheet hidden">
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
+
+<div
+  id="toast"
+  class="toast hidden"
+  role="status"
+></div>
+
+
+
+<!-- =========================================================
+     NOW PLAYING
+========================================================= -->
+
+<div
+  id="playerSheet"
+  class="player-sheet hidden"
+>
+
   <div class="player-handle"></div>
+
+
   <div class="player-info">
-    <img id="playerThumb" class="player-thumb" alt="" />
+
+    <img
+      id="playerThumb"
+      class="player-thumb"
+      alt=""
+    />
+
+
     <div class="player-meta">
-      <p id="playerTitle" class="player-title">&nbsp;</p>
-      <p id="playerChannel" class="player-channel">&nbsp;</p>
+
+      <p
+        id="playerTitle"
+        class="player-title"
+      >
+        &nbsp;
+      </p>
+
+      <p
+        id="playerChannel"
+        class="player-channel"
+      >
+        &nbsp;
+      </p>
+
     </div>
-    <button id="playerClose" class="player-close" type="button" aria-label="Close player">&times;</button>
+
+
+    <button
+      id="playerClose"
+      class="player-close"
+      type="button"
+      aria-label="Close player"
+    >
+      &times;
+    </button>
+
   </div>
-  <audio id="audioEl" controls></audio>
+
+
+  <audio
+    id="audioEl"
+    controls
+    preload="none"
+  ></audio>
+
 </div>
+
+
+
+<!-- =========================================================
+     LEGACY QUALITY ELEMENTS
+     
+     Kept hidden temporarily so the CURRENT app.js doesn't
+     crash before we replace it with the new settings logic.
+========================================================= -->
+
+<select
+  id="defaultAudioQuality"
+  hidden
+  aria-hidden="true"
+>
+  <option value="128">128 kbps</option>
+</select>
+
+<select
+  id="defaultVideoQuality"
+  hidden
+  aria-hidden="true"
+>
+  <option value="720">720p</option>
+</select>
+
+
 
 <script src="app.js"></script>
+
 </body>
-</html>
+        </html>
